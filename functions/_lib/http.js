@@ -16,6 +16,20 @@ function buildCorsHeaders(request, methods) {
   };
 }
 
+export function rawResponse(request, body, { status = 200, headers = {}, methods = "GET,POST,OPTIONS" } = {}) {
+  const requestId = getRequestId(request);
+
+  return new Response(body, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "x-request-id": requestId,
+      ...buildCorsHeaders(request, methods),
+      ...headers,
+    },
+  });
+}
+
 export function jsonResponse(request, payload, { status = 200, headers = {}, methods = "GET,POST,OPTIONS" } = {}) {
   const requestId = payload.requestId || getRequestId(request);
 

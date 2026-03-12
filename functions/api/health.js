@@ -11,13 +11,32 @@ export async function onRequestGet(context) {
     const bindingStatus = getBindingStatus(context.env);
     const config = getConfig(context.env);
     const issues = [];
+    const r2SetupGuideUrl = "/docs/r2-setup.html";
     let manifest = {
       available: false,
       source: context.env.FILTERS_INDEX_URL || "/docs/filters-index.json",
     };
 
     for (const [bindingName, available] of Object.entries(bindingStatus)) {
-      if (!available && bindingName !== "ASSETS") {
+      if (bindingName === "ASSETS") {
+        continue;
+      }
+
+      if (bindingName === "PHOTO_BUCKET") {
+        if (!available && config.storageMode === "r2") {
+          issues.push({
+            code: "photo_bucket_binding_missing",
+            message: 'Binding "PHOTO_BUCKET" is not configured for STORAGE_MODE="r2".',
+            details: {
+              storageMode: config.storageMode,
+              r2SetupGuideUrl,
+            },
+          });
+        }
+        continue;
+      }
+
+      if (!available) {
         issues.push({
           code: `${bindingName.toLowerCase()}_binding_missing`,
           message: `Binding "${bindingName}" is not configured.`,
@@ -53,6 +72,14 @@ export async function onRequestGet(context) {
           runtime: "cloudflare-pages-functions",
         bindings: bindingStatus,
         manifest,
+        storage: {
+          mode: config.storageMode,
+          r2Available: bindingStatus.PHOTO_BUCKET,
+          uploadsAvailable: config.storageMode === "r2" && bindingStatus.PHOTO_BUCKET,
+          shareableResults: config.storageMode === "r2" && bindingStatus.PHOTO_BUCKET,
+          resultStrategy: config.storageMode === "r2" && bindingStatus.PHOTO_BUCKET ? "stored-url" : "direct-response",
+          r2SetupGuideUrl: bindingStatus.PHOTO_BUCKET ? null : r2SetupGuideUrl,
+        },
         limits: {
           demoMode: config.demoMode,
           maxFreeTransformsPerIp: config.maxFreeTransformsPerIp,

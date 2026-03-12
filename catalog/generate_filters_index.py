@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import re
@@ -15,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PRD_PATH = ROOT / 'PRD.md'
 CONFIG_PATH = Path(__file__).resolve().with_name('catalog-config.json')
 OUTPUT_PATH = ROOT / 'docs' / 'filters-index.json'
+GZIP_OUTPUT_PATH = ROOT / 'docs' / 'filters-index.json.gz'
 
 MODEL_NORMALIZATION = {
     'FLUX.2 klein': 'flux2-klein-9b',
@@ -466,13 +468,15 @@ def main() -> int:
 
     if args.check:
         existing = OUTPUT_PATH.read_text(encoding='utf-8') if OUTPUT_PATH.exists() else None
-        if existing != rendered:
+        existing_gzip = gzip.decompress(GZIP_OUTPUT_PATH.read_bytes()).decode('utf-8') if GZIP_OUTPUT_PATH.exists() else None
+        if existing != rendered or existing_gzip != rendered:
             print('filters-index.json is out of date', file=sys.stderr)
             return 1
         print(f'filters-index.json is up to date ({catalog["totalFilters"]} filters)')
         return 0
 
     OUTPUT_PATH.write_text(rendered, encoding='utf-8')
+    GZIP_OUTPUT_PATH.write_bytes(gzip.compress(rendered.encode('utf-8'), compresslevel=9, mtime=0))
     print(f'Wrote {OUTPUT_PATH.relative_to(ROOT)} with {catalog["totalFilters"]} filters across {catalog["totalCategories"]} categories')
     return 0
 

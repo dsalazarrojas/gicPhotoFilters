@@ -18,9 +18,20 @@ function parseBoolean(value, fallback) {
   return fallback;
 }
 
+function parseStorageMode(value, fallback) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "r2" || normalized === "direct") {
+    return normalized;
+  }
+  return fallback;
+}
+
 export function getConfig(env) {
+  const hasPhotoBucket = typeof env.PHOTO_BUCKET?.get === "function" && typeof env.PHOTO_BUCKET?.put === "function";
+
   return {
     demoMode: parseBoolean(env.DEMO_MODE, true),
+    storageMode: parseStorageMode(env.STORAGE_MODE, hasPhotoBucket ? "r2" : "direct"),
     maxFreeNeuronsPerDay: parseInteger(env.MAX_FREE_NEURONS_PER_DAY, 10_000),
     maxFreeTransformsPerIp: parseInteger(env.MAX_FREE_TRANSFORMS_PER_IP, 10),
     seasonalFilter: String(env.SEASONAL_FILTER || "").trim(),

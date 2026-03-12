@@ -744,6 +744,19 @@ input[type='file'] {
   background: linear-gradient(145deg, rgba(236, 91, 19, 0.08), rgba(22, 165, 160, 0.08));
 }
 
+.stage-placeholder--example {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  align-items: center;
+  place-items: stretch;
+  text-align: left;
+}
+
+.stage-placeholder__copy {
+  display: grid;
+  gap: 0.75rem;
+  align-content: center;
+}
+
 .preview-frame {
   position: relative;
   border-radius: var(--radius-md);

@@ -9,3 +9,6 @@
 
 /docs/filters-index.json
   Cache-Control: public, max-age=300
+
+/docs/filters-index.json.gz
+  Cache-Control: public, max-age=300

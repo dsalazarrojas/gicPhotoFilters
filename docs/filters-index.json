@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-03-11T00:00:00Z",
-  "catalogHash": "4c0ce7e9eb8487b2",
+  "catalogHash": "401b8267f36146b2",
   "source": {
     "repository": "gicPhotoFilters",
     "prdPath": "PRD.md",
-    "prdDate": "March 11, 2026",
+    "prdDate": "March 11, 2026 · **Updated:** March 12, 2026",
     "generator": "catalog/generate_filters_index.py",
     "config": "catalog/catalog-config.json",
     "notes": [

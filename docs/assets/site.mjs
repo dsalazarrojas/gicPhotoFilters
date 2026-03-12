@@ -1,6 +1,6 @@
 const SITE = {
   name: 'GIC Photo Filters',
-  baseUrl: 'https://gicphotofilters.gic.mx',
+  baseUrl: 'https://photofilters.gic.mx',
   catalogPath: '/docs/filters-index.json',
   appLink: '/about.html#app-availability',
   configPath: '/docs/assets/site-config.json',
@@ -176,6 +176,7 @@ const toastTimers = new Set();
 let runtimeConfig = DEFAULT_SITE_CONFIG;
 let runtimeConfigPromise;
 let analyticsPromise;
+let healthSnapshotPromise;
 
 function slugify(value = '') {
   return String(value)
@@ -399,6 +400,18 @@ async function loadCatalog() {
   }
 }
 
+async function loadHealthSnapshot() {
+  if (!hasDom) return null;
+  if (healthSnapshotPromise) return healthSnapshotPromise;
+  healthSnapshotPromise = fetch('/api/health', { cache: 'no-store' })
+    .then(async (response) => {
+      const payload = await response.json().catch(() => null);
+      return payload?.data || null;
+    })
+    .catch(() => null);
+  return healthSnapshotPromise;
+}
+
 function generatePreviewData(filter, phase = 'before') {
   const cacheKey = `${filter.slug || slugify(filter.name)}-${phase}`;
   if (previewCache.has(cacheKey)) return previewCache.get(cacheKey);
@@ -551,6 +564,26 @@ function renderCatalogNotice(target, info) {
       </div>
       <a class="button-ghost" href="/browse.html">Preview the catalog UX</a>
     </div>`;
+}
+
+function renderHealthNotice(target, health) {
+  if (!target || !health?.storage) return;
+  target.querySelector('[data-health-notice]')?.remove();
+  const { mode, r2Available, r2SetupGuideUrl } = health.storage;
+  if (mode === 'r2' && r2Available) return;
+
+  const title = mode === 'direct' ? 'Direct mode is active' : 'R2 setup is still required';
+  const body = mode === 'direct'
+    ? 'Live transforms can still return a downloadable image immediately, but shareable 24-hour result URLs and /api/upload stay disabled until PHOTO_BUCKET is connected.'
+    : 'This deployment expects R2 storage, but PHOTO_BUCKET is not bound yet, so upload-backed flows will fail until R2 is configured.';
+  target.insertAdjacentHTML('beforeend', `
+    <div class="notice glass-panel" data-health-notice>
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(body)}</p>
+      </div>
+      ${r2SetupGuideUrl ? `<a class="button-ghost" href="${r2SetupGuideUrl}">R2 setup guide</a>` : ''}
+    </div>`);
 }
 
 function renderHeader(page) {
@@ -1063,11 +1096,28 @@ async function attemptApiTransform(filter, blob, intensity = 0.65) {
   payload.append('filterId', filter.id);
   payload.append('intensity', String(intensity));
   const response = await fetch('/api/transform', { method: 'POST', body: payload });
-  if (!response.ok) throw new Error(`Transform failed with ${response.status}`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.error?.message || `Transform failed with ${response.status}`);
+  }
+  const storageMode = response.headers.get('x-storage-mode') || 'r2';
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.startsWith('image/')) {
+    const blobResult = await response.blob();
+    return {
+      images: [URL.createObjectURL(blobResult)],
+      mode: 'api',
+      storageMode,
+    };
+  }
   const data = await response.json();
-  const images = normalizeTransformResponse(data);
+  const images = normalizeTransformResponse(data?.data || data);
   if (!images.length) throw new Error('Transform response did not include images');
-  return images;
+  return {
+    images,
+    mode: 'api',
+    storageMode: data?.data?.storage?.mode || data?.storage?.mode || storageMode,
+  };
 }
 
 function updateProgress(progressElement, percentage) {
@@ -1154,11 +1204,19 @@ function renderStagePlaceholder(filter) {
       </div>`;
   }
   return `
-    <div class="stage-placeholder">
-      <div>
+    <div class="stage-placeholder stage-placeholder--example">
+      <div class="stage-placeholder__copy">
         <h3>Upload a photo for ${escapeHtml(filter.name)}</h3>
-        <p>${filter.clientSideOnly ? 'This effect renders in the browser.' : 'The UI will call /api/transform when available and otherwise show a front-end preview shell.'}</p>
+        <p>${filter.clientSideOnly ? 'This effect renders in the browser.' : 'Use this catalog example to judge the look first, then upload your own photo when you are ready.'}</p>
       </div>
+      ${renderBeforeAfter({
+        beforeUrl: filter.previewBefore,
+        afterUrl: filter.previewAfter,
+        beforeLabel: 'Catalog example',
+        afterLabel: filter.name,
+        id: `placeholder-${filter.id}`,
+        caption: filter.clientSideOnly ? 'Instant effect example from the catalog' : 'Example before/after preview from the catalog',
+      })}
     </div>`;
 }
 
@@ -1225,7 +1283,7 @@ async function initHomePage() {
     '@type': 'WebSite',
     name: SITE.name,
     url: SITE.baseUrl,
-    description: 'Browse the gicPhotoFilters catalog, try free demo filters, and preview the Cloudflare Pages shell for gicPhotoFilters.gic.mx.',
+    description: 'Browse the gicPhotoFilters catalog, try free demo filters, and preview the Cloudflare Pages shell for photofilters.gic.mx.',
     potentialAction: {
       '@type': 'SearchAction',
       target: `${SITE.baseUrl}/browse.html#search={search_term_string}`,
@@ -1443,10 +1501,13 @@ async function initTryPage() {
 
   const info = await loadCatalog();
   const { catalog } = info;
+  const health = await loadHealthSnapshot();
   renderCatalogNotice(noticeTarget, info);
+  renderHealthNotice(noticeTarget, health);
 
   const state = {
     catalog,
+    health,
     filter: catalog.filters.find((item) => item.id === requestedId) || sortFilters(catalog.filters, 'popular')[0],
     sourceDataUrl: '',
     sourceBlob: null,
@@ -1458,6 +1519,7 @@ async function initTryPage() {
 
   const setSummary = async () => {
     const filter = state.filter;
+    const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly;
     const related = sortFilters(catalog.filters.filter((item) => item.category === filter.category && item.id !== filter.id), 'popular').slice(0, 6);
     trySelectionTitle.textContent = requestedId ? 'Switch filters' : 'Popular filters to start';
     selection.innerHTML = createSelectionMarkup(sortFilters(catalog.filters, 'popular').slice(0, 6));
@@ -1481,15 +1543,19 @@ async function initTryPage() {
     effectsControls.classList.toggle('hidden', !filter.clientSideOnly);
     transformButton.textContent = filter.clientSideOnly
       ? 'Apply effect instantly'
-      : filter.isDemoFilter
+      : demoOnlyOnWeb
+        ? 'Preview only on web'
+        : filter.isDemoFilter
         ? 'Transform — FREE ✨'
-        : 'Transform (uses your API key)';
+        : 'Transform with this deployment';
     stageSlot.innerHTML = renderStagePlaceholder(filter);
     stageNote.innerHTML = filter.clientSideOnly
       ? '<span class="badge badge--accent">Client-side effect · no upload to AI needed</span>'
+      : demoOnlyOnWeb
+        ? '<span class="badge badge--warning">Catalog preview only on the public web demo · use the app or your own deployment for live runs</span>'
       : filter.isDemoFilter
         ? '<span class="badge badge--success">Demo filter · ready for the free daily usage shell</span>'
-        : '<span class="badge badge--warning">App upgrade path · web shell falls back to preview mode without backend wiring</span>';
+        : '<span class="badge badge--warning">Full-catalog mode is enabled for this deployment</span>';
     renderUsageGrid(usageGrid, catalog, filter);
     overviewTab.innerHTML = renderOverview(filter);
     state.helpHtml = await getHelpHtml(filter);
@@ -1520,6 +1586,7 @@ async function initTryPage() {
       stageSlot.innerHTML = renderStagePlaceholder(filter);
       resultActions.classList.add('hidden');
       renderVariants(variantsTarget, [], 0, () => {});
+      initBeforeAfterSliders(stageSlot);
       return;
     }
     const current = state.variants[state.activeVariantIndex] || state.variants[0];
@@ -1530,7 +1597,7 @@ async function initTryPage() {
       afterLabel: state.outputMode === 'api' ? `${filter.name} result` : `${filter.name} preview`,
       caption: state.outputMode === 'api'
         ? 'Rendered from /api/transform'
-        : 'Preview mode keeps the front-end flow usable before the backend is wired',
+        : 'Preview mode kept the flow usable because the live AI result was unavailable',
     });
     resultActions.classList.remove('hidden');
     renderVariants(variantsTarget, state.variants, state.activeVariantIndex, (nextIndex) => {
@@ -1603,6 +1670,10 @@ async function initTryPage() {
 
   transformButton.addEventListener('click', async () => {
     if (!state.filter) return;
+    if (Boolean(state.health?.limits?.demoMode) && !state.filter.isDemoFilter && !state.filter.clientSideOnly) {
+      showToast('This filter is preview-only on the public web demo. Pick a FREE filter, use the app, or self-host with DEMO_MODE=false.');
+      return;
+    }
     if (!state.sourceDataUrl || !state.sourceBlob) {
       showToast('Upload a photo before running the transform shell.');
       return;
@@ -1628,8 +1699,10 @@ async function initTryPage() {
       }
       renderUsageGrid(usageGrid, catalog, state.filter);
       status.textContent = result.mode === 'api'
-        ? 'Transform complete. Download or share the result.'
-        : 'Preview ready. Hook up /api/transform later to replace preview mode with live model output.';
+        ? result.storageMode === 'direct'
+          ? 'Transform complete. Save the image now or share the filter link while direct mode is active.'
+          : 'Transform complete. Download or share the result.'
+        : 'Preview ready. The UI kept working even though the live AI result was unavailable.';
       track('filter_transform', { filterId: state.filter.id, mode: result.mode });
     } catch (error) {
       status.textContent = 'The transform shell hit an error. Try a different photo or filter.';
@@ -1637,11 +1710,14 @@ async function initTryPage() {
       console.error(error);
     } finally {
       transformButton.disabled = false;
+      const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !state.filter.isDemoFilter && !state.filter.clientSideOnly;
       transformButton.textContent = state.filter.clientSideOnly
         ? 'Apply effect instantly'
-        : state.filter.isDemoFilter
-          ? 'Transform — FREE ✨'
-          : 'Transform (uses your API key)';
+        : demoOnlyOnWeb
+          ? 'Preview only on web'
+          : state.filter.isDemoFilter
+            ? 'Transform — FREE ✨'
+            : 'Transform with this deployment';
     }
   });
 

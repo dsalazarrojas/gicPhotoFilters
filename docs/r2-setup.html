@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>R2 setup guide · GIC Photo Filters</title>
+  <meta name="description" content="Enable optional Cloudflare R2 storage for shareable result URLs, 24-hour retention, and upload-backed flows on GIC Photo Filters." />
+  <meta name="theme-color" content="#ec5b13" />
+  <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="canonical" id="canonical-link" href="https://photofilters.gic.mx/docs/r2-setup.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="GIC Photo Filters" />
+  <meta property="og:title" content="R2 setup guide · GIC Photo Filters" />
+  <meta property="og:description" content="Enable optional Cloudflare R2 storage for shareable result URLs, 24-hour retention, and upload-backed flows on GIC Photo Filters." />
+  <meta property="og:url" content="https://photofilters.gic.mx/docs/r2-setup.html" />
+  <meta property="og:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="R2 setup guide · GIC Photo Filters" />
+  <meta name="twitter:description" content="Enable optional Cloudflare R2 storage for shareable result URLs, 24-hour retention, and upload-backed flows on GIC Photo Filters." />
+  <meta name="twitter:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
+  <link rel="stylesheet" href="/docs/assets/style.css" />
+  <script type="application/ld+json" id="org-schema">{"@context":"https://schema.org","@type":"Organization","name":"GIC Photo Filters","url":"https://photofilters.gic.mx","logo":"https://photofilters.gic.mx/docs/assets/favicon.svg"}</script>
+  <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"TechArticle","name":"R2 setup guide · GIC Photo Filters","url":"https://photofilters.gic.mx/docs/r2-setup.html","description":"Enable optional Cloudflare R2 storage for shareable result URLs, 24-hour retention, and upload-backed flows on GIC Photo Filters."}</script>
+  <script type="module" src="/docs/assets/site.mjs"></script>
+</head>
+<body data-page="docs" data-schema-type="TechArticle">
+  <div class="site-frame">
+    <header class="site-header" data-site-header></header>
+    <main>
+      <div class="section-shell">
+        <section class="static-hero">
+          <span class="page-eyebrow">Optional R2 storage</span>
+          <h1>Turn direct mode into shareable result mode</h1>
+          <p class="lead">This repo now works without R2 by returning transformed images directly from <code>/api/transform</code>. If you also want 24-hour result URLs, stored uploads, and richer sharing, bind an R2 bucket and switch <code>STORAGE_MODE</code> to <code>r2</code>.</p>
+        </section>
+
+        <section class="section static-grid">
+          <article class="detail-card">
+            <h3>1. Create two R2 buckets</h3>
+            <p>In Cloudflare, create <code>gic-photo-filters-temp</code> and an optional preview bucket for local development. Add a 24-hour lifecycle rule so generated images clean themselves up.</p>
+          </article>
+          <article class="detail-card">
+            <h3>2. Bind PHOTO_BUCKET</h3>
+            <p>Uncomment the <code>[[r2_buckets]]</code> section in <code>wrangler.toml</code>, or add the same binding in the Cloudflare Pages dashboard. The binding name must stay <code>PHOTO_BUCKET</code>.</p>
+          </article>
+          <article class="detail-card">
+            <h3>3. Switch storage mode</h3>
+            <p>Set <code>STORAGE_MODE=&quot;r2&quot;</code> for deployments that should keep results for 24 hours. Leave it at <code>direct</code> if you want the lighter no-billing-required setup.</p>
+          </article>
+        </section>
+
+        <section class="section card">
+          <div class="section-heading">
+            <div>
+              <span class="page-eyebrow">Mode comparison</span>
+              <h2>Choose the deployment model that fits your launch</h2>
+            </div>
+            <p>Both modes are supported by the repo now, so you can start with the easiest path and upgrade later.</p>
+          </div>
+          <div class="static-grid">
+            <article class="detail-card">
+              <h3>Direct mode</h3>
+              <p>Best for quick demos and lower-friction deployments. Results come back once in the transform response, so visitors should download them immediately.</p>
+            </article>
+            <article class="detail-card">
+              <h3>R2 mode</h3>
+              <p>Best for public launches that want shareable URLs, upload-backed workflows, and 24-hour temporary storage served through <code>/api/image/:key</code>.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section card">
+          <div class="section-heading">
+            <div>
+              <span class="page-eyebrow">Verification</span>
+              <h2>Check the deployment health</h2>
+            </div>
+            <p>After deployment, visit <code>/api/health</code>. It now reports <code>storage.mode</code>, <code>storage.r2Available</code>, and this setup guide URL when R2 is still missing.</p>
+          </div>
+          <div class="markdown-content">
+            <ul>
+              <li><strong>Healthy direct mode:</strong> <code>storage.mode = "direct"</code>, <code>shareableResults = false</code>.</li>
+              <li><strong>Healthy R2 mode:</strong> <code>storage.mode = "r2"</code>, <code>r2Available = true</code>.</li>
+              <li><strong>Needs attention:</strong> <code>storage.mode = "r2"</code> with <code>r2Available = false</code>.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer class="site-footer" data-site-footer></footer>
+  </div>
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
