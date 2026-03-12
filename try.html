@@ -51,6 +51,10 @@
           <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden />
           <span class="badge badge--brand">Client-side resize to 1024px</span>
         </div>
+        <input id="camera-input" type="file" accept="image/*" capture="environment" hidden />
+        <div class="upload-actions upload-actions--camera">
+          <button class="button-ghost" id="camera-button" type="button">Use camera</button>
+        </div>
         <div class="detail-card hidden" id="effects-controls">
           <label class="panel-title" for="effects-intensity">Effect intensity</label>
           <input id="effects-intensity" type="range" min="0" max="100" value="65" />
@@ -58,6 +62,34 @@
         </div>
         <div class="progress" id="try-progress" hidden><span></span></div>
         <p class="microcopy" id="try-status">Upload a clear face photo for the best result.</p>
+        <details class="detail-card byok-panel" id="byok-panel">
+          <summary>
+            <div>
+              <span class="panel-title">Use your own Cloudflare API key</span>
+              <p class="microcopy" id="byok-summary">Live transforms stay in your browser.</p>
+            </div>
+          </summary>
+          <div class="byok-panel__grid">
+            <div class="byok-panel__mode">
+              <button class="button-ghost" type="button" data-byok-mode="demo">Demo mode</button>
+              <button class="button-ghost" type="button" data-byok-mode="live">Live mode</button>
+            </div>
+            <label class="byok-panel__field">
+              <span>Cloudflare Account ID</span>
+              <input id="cf-account-id" type="text" autocomplete="off" placeholder="Find it in the Cloudflare dashboard → right sidebar" />
+            </label>
+            <label class="byok-panel__field">
+              <span>API Token</span>
+              <input id="cf-api-token" type="password" autocomplete="off" placeholder="Token with Workers AI · Run permission" />
+            </label>
+            <div class="byok-panel__actions">
+              <a class="button-link" href="/docs/cloudflare-setup.html" target="_blank" rel="noreferrer">Get your free API token →</a>
+              <button class="button-ghost" type="button" id="byok-clear-button">Clear credentials</button>
+            </div>
+            <p class="microcopy byok-panel__note" id="byok-session-usage">Session: 0 neurons used · Live mode pay-as-you-go</p>
+            <p class="microcopy byok-panel__note">Credentials live in <code>sessionStorage</code> and are never sent to our servers.</p>
+          </div>
+        </details>
         <div class="upload-actions">
           <button class="button" id="transform-button" type="button">Transform — FREE ✨</button>
           <button class="button-ghost" id="reset-photo-button" type="button">Try another photo</button>
@@ -75,7 +107,8 @@
           <div class="variant-list" id="variant-list"></div>
           <div class="upload-actions hidden" id="result-actions">
             <button class="button-secondary" id="download-button" type="button">Download result</button>
-            <button class="button-ghost" id="share-button" type="button">Share</button>
+            <button class="button-ghost" id="share-filter-button" type="button">Share filter</button>
+            <button class="button" id="share-result-button" type="button" disabled>Share result</button>
           </div>
         </section>
 

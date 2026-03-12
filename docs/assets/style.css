@@ -212,6 +212,69 @@ p { color: var(--text-soft); line-height: 1.7; }
 
 html[data-theme='dark'] .button-link { color: #ffb088; }
 
+.upload-actions--camera {
+  gap: 0;
+  margin-top: 0.55rem;
+}
+
+.byok-panel summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.byok-panel__grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.byok-panel__mode {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.byok-panel__mode button {
+  flex: 1;
+}
+
+.byok-panel__mode button[aria-pressed='true'] {
+  border-color: var(--brand);
+  color: var(--brand-strong);
+  background: color-mix(in srgb, var(--brand) 12%, var(--surface-alt));
+}
+
+.byok-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.byok-panel__field input {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.7rem 0.85rem;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.byok-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.byok-panel__note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+
 .site-header {
   position: sticky;
   top: 0;

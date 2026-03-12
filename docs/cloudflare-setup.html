@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cloudflare BYOK guide · GIC Photo Filters</title>
+  <meta name="description" content="Bring your own Cloudflare Workers AI credentials to gicPhotoFilters. This BYOK guide walks through account, token, and Account ID setup so live transforms run directly from the browser." />
+  <meta name="theme-color" content="#ec5b13" />
+  <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="canonical" id="canonical-link" href="https://photofilters.gic.mx/docs/cloudflare-setup.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="GIC Photo Filters" />
+  <meta property="og:title" content="Cloudflare BYOK guide · GIC Photo Filters" />
+  <meta property="og:description" content="Bring your own Cloudflare Workers AI credentials to gicPhotoFilters. This BYOK guide walks through account, token, and Account ID setup so live transforms run directly from the browser." />
+  <meta property="og:url" content="https://photofilters.gic.mx/docs/cloudflare-setup.html" />
+  <meta property="og:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cloudflare BYOK guide · GIC Photo Filters" />
+  <meta name="twitter:description" content="Bring your own Cloudflare Workers AI credentials to gicPhotoFilters. This BYOK guide walks through account, token, and Account ID setup so live transforms run directly from the browser." />
+  <meta name="twitter:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
+  <link rel="stylesheet" href="/docs/assets/style.css" />
+  <script type="application/ld+json" id="org-schema">{"@context":"https://schema.org","@type":"Organization","name":"GIC Photo Filters","url":"https://photofilters.gic.mx","logo":"https://photofilters.gic.mx/docs/assets/favicon.svg"}</script>
+  <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"TechArticle","name":"Cloudflare BYOK guide · GIC Photo Filters","url":"https://photofilters.gic.mx/docs/cloudflare-setup.html","description":"Bring your own Cloudflare Workers AI credentials to gicPhotoFilters. This BYOK guide walks through account, token, and Account ID setup so live transforms run directly from the browser."}</script>
+  <script type="module" src="/docs/assets/site.mjs"></script>
+</head>
+<body data-page="docs" data-schema-type="TechArticle">
+  <div class="site-frame">
+    <header class="site-header" data-site-header></header>
+    <main>
+      <div class="section-shell">
+        <section class="static-hero">
+          <span class="page-eyebrow">BYOK</span>
+          <h1>Use your Cloudflare key on gicPhotoFilters</h1>
+          <p class="lead">gicPhotoFilters now lets you plug in your Cloudflare account ID and Workers AI token so transforms run directly from your browser. These credentials stay in sessionStorage and never hit GIC's backend.</p>
+        </section>
+
+        <section class="section static-grid">
+          <article class="detail-card">
+            <h3>1. Create a Cloudflare account</h3>
+            <p>Head to <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer">dash.cloudflare.com/sign-up</a> and follow the onboarding flow. Cloudflare's free tier includes Workers AI credits.</p>
+          </article>
+          <article class="detail-card">
+            <h3>2. Find your Account ID</h3>
+            <p>From the dashboard, open “Account Home” and copy the Account ID from the right sidebar. This value is required in the Try page BYOK panel.</p>
+          </article>
+          <article class="detail-card">
+            <h3>3. Create a Workers AI token</h3>
+            <p>Under “My Profile → API Tokens”, create a scoped token with <strong>Workers AI: Run</strong> permission. Paste it into the BYOK panel. The token stays in your browser tab only.</p>
+          </article>
+        </section>
+
+        <section class="section card">
+          <div class="section-heading">
+            <div>
+              <span class="page-eyebrow">Live mode</span>
+              <h2>What happens after you enter credentials</h2>
+            </div>
+            <p>Once the BYOK panel is configured, the Try page calls Cloudflare's REST API directly for every supported filter. No data goes through GIC's backend, so your billing and neuron usage stay with Cloudflare.</p>
+          </div>
+          <div class="markdown-content">
+            <ul>
+              <li>The browser POSTs to <code>https://api.cloudflare.com/client/v4/accounts/{Account ID}/ai/run/{modelId}</code> using your token.</li>
+              <li>A single transform returns an image blob that the page renders instantly and can download or share.</li>
+              <li>Credentials are stored in <code>sessionStorage</code> only, cleared when the tab closes. GIC never receives or logs them.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="section card">
+          <div class="section-heading">
+            <div>
+              <span class="page-eyebrow">Session view</span>
+              <h2>Quick tips for the BYOK workflow</h2>
+            </div>
+            <p>Use the “Use your own Cloudflare API key” panel on the Try page. Toggle between demo and live mode, paste your Account ID + token, and watch the live status badges update.</p>
+          </div>
+          <div class="markdown-content">
+            <ul>
+              <li>The live mode toggle keeps demo-only preview examples available until you enter both credentials.</li>
+              <li>Live transforms increment a session neuron counter shown beside the panel so you can track how much you are spending.</li>
+              <li>When live mode is active the “Share result” button shares the actual output image; “Share filter” still copies the Try page link.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer class="site-footer" data-site-footer></footer>
+  </div>
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

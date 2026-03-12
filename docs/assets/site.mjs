@@ -170,6 +170,18 @@ const FALLBACK_CATALOG = {
   ],
 };
 
+const BYOK_SESSION_KEYS = Object.freeze({
+  ACCOUNT_ID: 'gicpf.byok.accountId',
+  API_TOKEN: 'gicpf.byok.apiToken',
+  MODE: 'gicpf.byok.mode',
+  USAGE: 'gicpf.byok.neuronsUsed',
+});
+
+const BYOK_MODES = Object.freeze({
+  DEMO: 'demo',
+  LIVE: 'live',
+});
+
 const hasDom = typeof window !== 'undefined' && typeof document !== 'undefined';
 const previewCache = new Map();
 const toastTimers = new Set();
@@ -177,6 +189,63 @@ let runtimeConfig = DEFAULT_SITE_CONFIG;
 let runtimeConfigPromise;
 let analyticsPromise;
 let healthSnapshotPromise;
+
+function readSessionStorageValue(key) {
+  if (!hasDom) return '';
+  try {
+    return sessionStorage.getItem(key) || '';
+  } catch (error) {
+    console.warn('Unable to access sessionStorage', error);
+    return '';
+  }
+}
+
+function writeSessionStorageValue(key, value) {
+  if (!hasDom) return;
+  try {
+    sessionStorage.setItem(key, value);
+  } catch (error) {
+    console.warn('Unable to save to sessionStorage', error);
+  }
+}
+
+function removeSessionStorageValue(key) {
+  if (!hasDom) return;
+  try {
+    sessionStorage.removeItem(key);
+  } catch (error) {
+    console.warn('Unable to remove sessionStorage key', error);
+  }
+}
+
+function loadByokSession() {
+  const accountId = readSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID);
+  const apiToken = readSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN);
+  const storedMode = readSessionStorageValue(BYOK_SESSION_KEYS.MODE);
+  const hasCreds = Boolean(accountId && apiToken);
+  const mode = hasCreds && storedMode === BYOK_MODES.LIVE ? BYOK_MODES.LIVE : BYOK_MODES.DEMO;
+  return {
+    accountId,
+    apiToken,
+    mode,
+  };
+}
+
+function getSessionNeurons() {
+  const value = readSessionStorageValue(BYOK_SESSION_KEYS.USAGE);
+  return Number.isFinite(Number(value)) ? Number(value) : 0;
+}
+
+function resetSessionNeurons() {
+  removeSessionStorageValue(BYOK_SESSION_KEYS.USAGE);
+}
+
+function addSessionNeurons(amount) {
+  const current = getSessionNeurons();
+  const next = current + Math.max(0, Number(amount) || 0);
+  writeSessionStorageValue(BYOK_SESSION_KEYS.USAGE, String(next));
+  return next;
+}
 
 function slugify(value = '') {
   return String(value)
@@ -1108,6 +1177,7 @@ async function attemptApiTransform(filter, blob, intensity = 0.65) {
       images: [URL.createObjectURL(blobResult)],
       mode: 'api',
       storageMode,
+      blob: blobResult,
     };
   }
   const data = await response.json();
@@ -1120,13 +1190,89 @@ async function attemptApiTransform(filter, blob, intensity = 0.65) {
   };
 }
 
+async function attemptLiveTransform(filter, blob, intensity = 0.65, catalog = {}, byok = {}) {
+  const accountId = (byok?.accountId || '').trim();
+  const apiToken = byok?.apiToken || '';
+  if (!accountId || !apiToken) {
+    throw new Error('Enter your Cloudflare account ID and API token for live transforms.');
+  }
+  if (filter.type === 'inpainting') {
+    throw new Error('Live browser mode does not support inpainting filters yet. Use demo mode or the companion app.');
+  }
+  const modelDefinition = catalog?.models?.[filter.model];
+  const modelId = (modelDefinition?.id || filter.model || '').trim();
+  if (!modelId) {
+    throw new Error('Unable to resolve the model ID for this filter.');
+  }
+  const imageBuffer = await blob.arrayBuffer();
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${encodeURIComponent(modelId)}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: filter.prompt,
+        negative_prompt: filter.negativePrompt || undefined,
+        image: Array.from(new Uint8Array(imageBuffer)),
+        strength: Number(filter.strength ?? 0.65),
+        guidance: Number(filter.guidance ?? 7.5),
+        width: Number(filter.outputWidth ?? 1024),
+        height: Number(filter.outputHeight ?? 1024),
+      }),
+    },
+  );
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    const message =
+      payload?.errors?.[0]?.message || payload?.message || `Live transform failed with ${response.status}`;
+    throw new Error(message);
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  let blobResult;
+  if (contentType.startsWith('image/')) {
+    blobResult = await response.blob();
+  } else {
+    const payload = await response.json().catch(() => null);
+    const base64Image = payload?.result?.image || payload?.image;
+    if (!base64Image || typeof base64Image !== 'string') {
+      throw new Error('Cloudflare did not return an image payload.');
+    }
+    const binary = atob(base64Image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    blobResult = new Blob([bytes], { type: payload?.result?.content_type || 'image/png' });
+  }
+
+  return {
+    images: [URL.createObjectURL(blobResult)],
+    mode: 'live',
+    storageMode: 'direct',
+    blob: blobResult,
+  };
+}
+
 function updateProgress(progressElement, percentage) {
   if (!progressElement) return;
   const bar = progressElement.querySelector('span');
   if (bar) bar.style.setProperty('--progress', `${percentage}%`);
 }
 
-async function runTransform({ filter, source, sourceBlob, intensity, statusElement, progressElement }) {
+async function runTransform({
+  filter,
+  source,
+  sourceBlob,
+  intensity,
+  statusElement,
+  progressElement,
+  catalog,
+  byok,
+}) {
   const messages = filter.clientSideOnly
     ? ['Applying the browser effect…', 'Dialing in color and contrast…', 'Rendering the instant preview…']
     : ['Preparing your upload…', 'Mixing the palette…', 'Building the transformed result shell…'];
@@ -1143,19 +1289,46 @@ async function runTransform({ filter, source, sourceBlob, intensity, statusEleme
   try {
     let images = [];
     let mode = 'preview';
+    let storageMode = 'preview';
+    let warningMessage = '';
+    const liveByok = Boolean(!filter.clientSideOnly && byok?.mode === BYOK_MODES.LIVE);
     if (!filter.clientSideOnly) {
-      try {
-        images = await attemptApiTransform(filter, sourceBlob, intensity);
-        mode = 'api';
-      } catch {
-        images = await generatePreviewVariants(source, filter, intensity);
-        mode = 'preview';
+      if (liveByok) {
+        try {
+          const liveResult = await attemptLiveTransform(filter, sourceBlob, intensity, catalog, byok);
+          images = liveResult.images;
+          mode = liveResult.mode;
+          storageMode = liveResult.storageMode || 'direct';
+          warningMessage = '';
+        } catch (error) {
+          warningMessage = `Live transform failed: ${error.message}. Showing preview instead.`;
+          console.error(error);
+          images = await generatePreviewVariants(source, filter, intensity);
+          mode = 'preview';
+          storageMode = 'preview';
+        }
+      } else {
+        try {
+          const apiResult = await attemptApiTransform(filter, sourceBlob, intensity);
+          images = apiResult.images;
+          mode = apiResult.mode;
+          storageMode = apiResult.storageMode || 'r2';
+          warningMessage = '';
+        } catch (error) {
+          warningMessage = `Transform failed: ${error.message}. Preview ready instead.`;
+          console.error(error);
+          images = await generatePreviewVariants(source, filter, intensity);
+          mode = 'preview';
+          storageMode = 'preview';
+        }
       }
     } else {
       images = await generatePreviewVariants(source, filter, intensity);
+      mode = 'preview';
+      storageMode = 'preview';
     }
     await new Promise((resolve) => window.setTimeout(resolve, 900));
-    return { images, mode };
+    return { images, mode, storageMode, warningMessage };
   } finally {
     window.clearInterval(ticker);
     updateProgress(progressElement, 100);
@@ -1478,10 +1651,12 @@ async function initTryPage() {
   const selection = document.getElementById('try-selection');
   const dropzone = document.getElementById('upload-dropzone');
   const fileInput = document.getElementById('file-input');
+  const cameraInput = document.getElementById('camera-input');
   const transformButton = document.getElementById('transform-button');
   const resetButton = document.getElementById('reset-photo-button');
   const downloadButton = document.getElementById('download-button');
-  const shareButton = document.getElementById('share-button');
+  const shareFilterButton = document.getElementById('share-filter-button');
+  const shareResultButton = document.getElementById('share-result-button');
   const status = document.getElementById('try-status');
   const progress = document.getElementById('try-progress');
   const stageSlot = document.getElementById('stage-slot');
@@ -1496,6 +1671,14 @@ async function initTryPage() {
   const techTab = document.getElementById('tab-tech');
   const relatedGrid = document.getElementById('related-grid');
   const trySelectionTitle = document.getElementById('selection-title');
+  const byokPanel = document.getElementById('byok-panel');
+  const byokSummary = document.getElementById('byok-summary');
+  const byokAccountInput = document.getElementById('cf-account-id');
+  const byokTokenInput = document.getElementById('cf-api-token');
+  const byokModeButtons = byokPanel ? Array.from(byokPanel.querySelectorAll('[data-byok-mode]')) : [];
+  const byokClearButton = document.getElementById('byok-clear-button');
+  const byokSessionUsage = document.getElementById('byok-session-usage');
+  const cameraButton = document.getElementById('camera-button');
   const params = new URLSearchParams(window.location.search);
   const requestedId = params.get('id');
 
@@ -1514,8 +1697,126 @@ async function initTryPage() {
     variants: [],
     activeVariantIndex: 0,
     outputMode: '',
+    storageMode: '',
+    latestResultBlob: null,
+    byok: loadByokSession(),
     helpHtml: '',
   };
+
+  const updateSessionUsageDisplay = () => {
+    if (!byokSessionUsage) return;
+    const used = getSessionNeurons();
+    const cost = state.filter ? `${state.filter.estimatedNeurons} neurons/run` : 'Pick a filter to see the cost';
+    const label = used
+      ? `Session estimate: ${formatNumber(used)} neurons used · ${cost}`
+      : `Session estimate: 0 neurons used · ${cost}`;
+    byokSessionUsage.textContent = label;
+  };
+
+  const updateByokPanelUi = () => {
+    const hasCreds = Boolean(state.byok.accountId && state.byok.apiToken);
+    const liveReady = state.byok.mode === BYOK_MODES.LIVE && hasCreds;
+    byokModeButtons.forEach((button) => {
+      const targetMode = button.dataset.byokMode;
+      button.setAttribute('aria-pressed', String(targetMode === state.byok.mode));
+    });
+    if (byokSummary) {
+      byokSummary.textContent = liveReady
+        ? 'Live mode will call Cloudflare directly with your credentials.'
+        : hasCreds
+          ? 'Switch to live mode whenever you are ready to run with your own Cloudflare key.'
+          : 'Enter your Cloudflare account ID and API token to unlock live transforms.';
+    }
+    updateSessionUsageDisplay();
+  };
+
+  const updateTransformButtonLabel = () => {
+    const filter = state.filter;
+    if (!filter) return;
+    const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly;
+    transformButton.textContent = filter.clientSideOnly
+      ? 'Apply effect instantly'
+      : state.byok.mode === BYOK_MODES.LIVE
+        ? 'Transform with your Cloudflare key'
+        : demoOnlyOnWeb
+          ? 'Preview only on web'
+          : filter.isDemoFilter
+            ? 'Transform — FREE ✨'
+            : 'Transform with this deployment';
+  };
+
+  const setByokMode = (mode) => {
+    const normalized = mode === BYOK_MODES.LIVE ? BYOK_MODES.LIVE : BYOK_MODES.DEMO;
+    if (normalized === BYOK_MODES.LIVE && !(state.byok.accountId && state.byok.apiToken)) {
+      status.textContent = 'Live mode requires both a Cloudflare account ID and API token.';
+      state.byok.mode = BYOK_MODES.DEMO;
+      writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, BYOK_MODES.DEMO);
+      updateByokPanelUi();
+      updateTransformButtonLabel();
+      return;
+    }
+    state.byok.mode = normalized;
+    writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, normalized);
+    updateByokPanelUi();
+    updateTransformButtonLabel();
+  };
+
+  const handleByokInputChange = () => {
+    const accountId = (byokAccountInput?.value || '').trim();
+    const apiToken = (byokTokenInput?.value || '').trim();
+    state.byok.accountId = accountId;
+    state.byok.apiToken = apiToken;
+    if (accountId) writeSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID, accountId);
+    else removeSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID);
+    if (apiToken) writeSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN, apiToken);
+    else removeSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN);
+    if (!(accountId && apiToken)) {
+      state.byok.mode = BYOK_MODES.DEMO;
+      writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, BYOK_MODES.DEMO);
+    }
+    updateByokPanelUi();
+    updateTransformButtonLabel();
+  };
+
+  const clearByokCredentials = () => {
+    if (byokAccountInput) byokAccountInput.value = '';
+    if (byokTokenInput) byokTokenInput.value = '';
+    state.byok.accountId = '';
+    state.byok.apiToken = '';
+    state.byok.mode = BYOK_MODES.DEMO;
+    removeSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID);
+    removeSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN);
+    writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, BYOK_MODES.DEMO);
+    resetSessionNeurons();
+    updateByokPanelUi();
+    updateTransformButtonLabel();
+    status.textContent = 'Live mode credentials cleared.';
+  };
+
+  const getStageBadge = (filter) => {
+    if (state.outputMode === 'live') {
+      return '<span class="badge badge--brand">Live BYOK result · direct Cloudflare call</span>';
+    }
+    if (state.outputMode === 'api') {
+      return '<span class="badge badge--success">Demo result · /api/transform</span>';
+    }
+    if (filter.clientSideOnly) {
+      return '<span class="badge badge--accent">Client-side effect · no AI upload</span>';
+    }
+    if (state.byok.mode === BYOK_MODES.LIVE && state.byok.accountId && state.byok.apiToken) {
+      return '<span class="badge badge--brand">Live BYOK mode enabled · transforms run on your Cloudflare account</span>';
+    }
+    if (Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly) {
+      return '<span class="badge badge--warning">Catalog preview only on the public web demo · use the app or your own deployment for live runs</span>';
+    }
+    if (filter.isDemoFilter) {
+      return '<span class="badge badge--success">Demo filter · ready for the free daily usage shell</span>';
+    }
+    return '<span class="badge badge--warning">Full-catalog mode is enabled for this deployment</span>';
+  };
+
+  if (byokAccountInput) byokAccountInput.value = state.byok.accountId;
+  if (byokTokenInput) byokTokenInput.value = state.byok.apiToken;
 
   const setSummary = async () => {
     const filter = state.filter;
@@ -1549,13 +1850,7 @@ async function initTryPage() {
         ? 'Transform — FREE ✨'
         : 'Transform with this deployment';
     stageSlot.innerHTML = renderStagePlaceholder(filter);
-    stageNote.innerHTML = filter.clientSideOnly
-      ? '<span class="badge badge--accent">Client-side effect · no upload to AI needed</span>'
-      : demoOnlyOnWeb
-        ? '<span class="badge badge--warning">Catalog preview only on the public web demo · use the app or your own deployment for live runs</span>'
-      : filter.isDemoFilter
-        ? '<span class="badge badge--success">Demo filter · ready for the free daily usage shell</span>'
-        : '<span class="badge badge--warning">Full-catalog mode is enabled for this deployment</span>';
+    stageNote.innerHTML = getStageBadge(filter);
     renderUsageGrid(usageGrid, catalog, filter);
     overviewTab.innerHTML = renderOverview(filter);
     state.helpHtml = await getHelpHtml(filter);
@@ -1578,6 +1873,11 @@ async function initTryPage() {
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
       url: `${SITE.baseUrl}/try.html?id=${encodeURIComponent(filter.id)}`,
     });
+    updateTransformButtonLabel();
+    updateByokPanelUi();
+    status.textContent = state.byok.mode === BYOK_MODES.LIVE
+      ? 'Live mode routes transforms through your Cloudflare account. Upload a photo to begin.'
+      : 'Upload a clear face photo for the best result.';
   };
 
   const renderResult = () => {
@@ -1587,6 +1887,9 @@ async function initTryPage() {
       resultActions.classList.add('hidden');
       renderVariants(variantsTarget, [], 0, () => {});
       initBeforeAfterSliders(stageSlot);
+      stageNote.innerHTML = getStageBadge(filter);
+      if (shareResultButton) shareResultButton.disabled = true;
+      if (shareFilterButton) shareFilterButton.disabled = false;
       return;
     }
     const current = state.variants[state.activeVariantIndex] || state.variants[0];
@@ -1605,6 +1908,9 @@ async function initTryPage() {
       renderResult();
     });
     initBeforeAfterSliders(stageSlot);
+    stageNote.innerHTML = getStageBadge(filter);
+    if (shareResultButton) shareResultButton.disabled = !state.variants.length;
+    if (shareFilterButton) shareFilterButton.disabled = false;
   };
 
   const setSource = async (file) => {
@@ -1635,7 +1941,10 @@ async function initTryPage() {
     state.variants = [];
     state.activeVariantIndex = 0;
     state.outputMode = '';
+    state.storageMode = '';
+    state.latestResultBlob = null;
     fileInput.value = '';
+    if (cameraInput) cameraInput.value = '';
     status.textContent = 'Upload a clear face photo for the best result.';
     renderResult();
   };
@@ -1645,6 +1954,13 @@ async function initTryPage() {
     const [file] = event.target.files || [];
     if (file) await setSource(file);
   });
+  if (cameraButton && cameraInput) {
+    cameraButton.addEventListener('click', () => cameraInput.click());
+    cameraInput.addEventListener('change', async (event) => {
+      const [file] = event.target.files || [];
+      if (file) await setSource(file);
+    });
+  }
   ['dragenter', 'dragover'].forEach((eventName) => dropzone.addEventListener(eventName, (event) => {
     event.preventDefault();
     dropzone.dataset.dragging = 'true';
@@ -1668,8 +1984,21 @@ async function initTryPage() {
     }
   });
 
+  byokModeButtons.forEach((button) => {
+    button.addEventListener('click', () => setByokMode(button.dataset.byokMode));
+  });
+  byokAccountInput?.addEventListener('input', handleByokInputChange);
+  byokTokenInput?.addEventListener('input', handleByokInputChange);
+  byokClearButton?.addEventListener('click', clearByokCredentials);
+
   transformButton.addEventListener('click', async () => {
     if (!state.filter) return;
+    const liveModeActive = state.byok.mode === BYOK_MODES.LIVE;
+    if (liveModeActive && !(state.byok.accountId && state.byok.apiToken)) {
+      status.textContent = 'Enter your Cloudflare account ID and API token to run live transforms.';
+      showToast('Live mode needs your Cloudflare credentials.');
+      return;
+    }
     if (Boolean(state.health?.limits?.demoMode) && !state.filter.isDemoFilter && !state.filter.clientSideOnly) {
       showToast('This filter is preview-only on the public web demo. Pick a FREE filter, use the app, or self-host with DEMO_MODE=false.');
       return;
@@ -1689,35 +2018,42 @@ async function initTryPage() {
         intensity,
         statusElement: status,
         progressElement: progress,
+        catalog,
+        byok: state.byok,
       });
       state.variants = result.images;
       state.outputMode = result.mode;
+      state.storageMode = result.storageMode || state.storageMode;
+      state.latestResultBlob = result.blob || null;
       state.activeVariantIndex = 0;
       renderResult();
-      if (!state.filter.clientSideOnly && state.filter.isDemoFilter) {
+      if (result.mode === 'live') {
+        addSessionNeurons(state.filter.estimatedNeurons);
+        updateSessionUsageDisplay();
+      }
+      if (!state.filter.clientSideOnly && state.filter.isDemoFilter && result.mode === 'api') {
         incrementUsage(state.filter);
       }
       renderUsageGrid(usageGrid, catalog, state.filter);
-      status.textContent = result.mode === 'api'
-        ? result.storageMode === 'direct'
-          ? 'Transform complete. Save the image now or share the filter link while direct mode is active.'
-          : 'Transform complete. Download or share the result.'
-        : 'Preview ready. The UI kept working even though the live AI result was unavailable.';
+      const successMessage = result.warningMessage
+        ? result.warningMessage
+        : result.mode === 'live'
+          ? 'Live transform complete. Save or share the result.'
+          : result.mode === 'api'
+            ? result.storageMode === 'direct'
+              ? 'Transform complete. Save the image now or share the filter link while direct mode is active.'
+              : 'Transform complete. Download or share the result.'
+            : 'Preview ready. The UI kept working even though the live AI result was unavailable.';
+      status.textContent = successMessage;
       track('filter_transform', { filterId: state.filter.id, mode: result.mode });
     } catch (error) {
-      status.textContent = 'The transform shell hit an error. Try a different photo or filter.';
-      showToast('Transform failed. The shell stayed intact so you can keep testing the UI.');
+      const message = error?.message || 'The transform shell hit an error. Try a different photo or filter.';
+      status.textContent = message;
+      showToast(`Transform failed: ${message}`);
       console.error(error);
     } finally {
       transformButton.disabled = false;
-      const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !state.filter.isDemoFilter && !state.filter.clientSideOnly;
-      transformButton.textContent = state.filter.clientSideOnly
-        ? 'Apply effect instantly'
-        : demoOnlyOnWeb
-          ? 'Preview only on web'
-          : state.filter.isDemoFilter
-            ? 'Transform — FREE ✨'
-            : 'Transform with this deployment';
+      updateTransformButtonLabel();
     }
   });
 
@@ -1733,7 +2069,7 @@ async function initTryPage() {
     track('filter_download', { filterId: state.filter.id });
   });
 
-  shareButton.addEventListener('click', async () => {
+  shareFilterButton?.addEventListener('click', async () => {
     const url = `${window.location.origin}/try.html?id=${encodeURIComponent(state.filter.id)}`;
     const text = `${state.filter.shareText} ${url}`;
     try {
@@ -1746,6 +2082,40 @@ async function initTryPage() {
       track('filter_share', { filterId: state.filter.id });
     } catch {
       showToast('Sharing was cancelled.');
+    }
+  });
+
+  shareResultButton?.addEventListener('click', async () => {
+    if (!state.filter) return;
+    const current = state.variants[state.activeVariantIndex];
+    if (!current) {
+      showToast('Run a transform before sharing a result.');
+      return;
+    }
+    const shareUrl = `${window.location.origin}/try.html?id=${encodeURIComponent(state.filter.id)}`;
+    const shareText = `${state.filter.shareText} ${shareUrl}`;
+    try {
+      if (navigator.share) {
+        const blob = await fetch(current).then((response) => response.blob());
+        const file = new File([blob], `${state.filter.slug || 'gic-photo-filter'}-${state.activeVariantIndex + 1}.jpg`, {
+          type: blob.type || 'image/jpeg',
+        });
+        const canShareFile = navigator.canShare?.({ files: [file] });
+        if (canShareFile) {
+          await navigator.share({ title: state.filter.name, text: shareText, files: [file] });
+        } else {
+          await navigator.share({ title: state.filter.name, text: shareText, url: current });
+        }
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(current);
+        showToast('Result link copied to your clipboard.');
+      } else {
+        showToast('Sharing is not available in this browser.');
+      }
+      track('filter_share_result', { filterId: state.filter.id, mode: state.outputMode || 'preview' });
+    } catch (error) {
+      showToast('Result sharing was cancelled.');
+      console.error(error);
     }
   });
 
@@ -1764,8 +2134,9 @@ async function initTryPage() {
     });
   });
 
+  updateByokPanelUi();
+  updateTransformButtonLabel();
   await setSummary();
-  status.textContent = 'Upload a clear face photo for the best result.';
   renderResult();
   track('filter_view', { filterId: state.filter.id });
 }

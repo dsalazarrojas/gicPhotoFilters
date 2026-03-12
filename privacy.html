@@ -33,20 +33,24 @@
     <h1>Photos, demos, and data handling</h1>
     <p class="lead">The web shell is explicit about what happens to photos: client-side effects never leave the device, AI-backed transforms are intended to flow through backend endpoints later, and the PRD assumes short-lived image retention for server-side processing.</p>
   </section>
-  <section class="section static-grid">
-    <article class="detail-card">
-      <h3>Client-side effects</h3>
-      <p>Filters in the Effects &amp; Filters category render locally in the browser. Uploaded pixels stay on-device and the daily free usage budget does not apply.</p>
-    </article>
-    <article class="detail-card">
-      <h3>AI transform intent</h3>
-      <p>When <code>/api/transform</code> is connected, photos may be processed by AI infrastructure. The PRD targets temporary storage and deletion within 24 hours for those flows.</p>
-    </article>
-    <article class="detail-card">
-      <h3>No account required</h3>
-      <p>The shell does not add sign-in or identity collection. Demo budgeting is expressed as daily limits and neuron counters, not account-based profiles.</p>
-    </article>
-  </section>
+    <section class="section static-grid">
+      <article class="detail-card">
+        <h3>Client-side effects</h3>
+        <p>Filters in the Effects &amp; Filters category render locally in the browser. Uploaded pixels stay on-device and the daily free usage budget does not apply.</p>
+      </article>
+      <article class="detail-card">
+        <h3>AI transform intent</h3>
+        <p>When <code>/api/transform</code> is connected, photos may be processed by AI infrastructure. The PRD targets temporary storage and deletion within 24 hours for those flows.</p>
+      </article>
+      <article class="detail-card">
+        <h3>No account required</h3>
+        <p>The shell does not add sign-in or identity collection. Demo budgeting is expressed as daily limits and neuron counters, not account-based profiles.</p>
+      </article>
+      <article class="detail-card">
+        <h3>Bring Your Own Key (BYOK)</h3>
+        <p>The Try page accepts your Cloudflare Account ID and Workers AI token in the BYOK panel. Credentials are stored in <code>sessionStorage</code>, used to call Cloudflare directly, and are never sent to GIC’s servers. Follow the <a href="/docs/cloudflare-setup.html">Cloudflare BYOK guide</a> to create the values you need.</p>
+      </article>
+    </section>
   <section class="section card">
     <div class="section-heading">
       <div>
