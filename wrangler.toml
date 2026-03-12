@@ -6,15 +6,16 @@ send_metrics = false
 [ai]
 binding = "AI"
 
-[[r2_buckets]]
-binding = "PHOTO_BUCKET"
-bucket_name = "gic-photo-filters-temp"
-preview_bucket_name = "gic-photo-filters-temp-preview"
+# R2 bucket — enable R2 in the Cloudflare Dashboard and uncomment when ready for live AI transforms
+# [[r2_buckets]]
+# binding = "PHOTO_BUCKET"
+# bucket_name = "gic-photo-filters-temp"
+# preview_bucket_name = "gic-photo-filters-temp-preview"
 
 [[kv_namespaces]]
 binding = "USAGE_KV"
-id = "REPLACE_WITH_USAGE_KV_ID"
-preview_id = "REPLACE_WITH_USAGE_KV_PREVIEW_ID"
+id = "69d43c998f9440ed9c73648d9591beee"
+preview_id = "1a04e87cc92048c48e2ca544e9b2be02"
 
 [vars]
 DEMO_MODE = "true"
