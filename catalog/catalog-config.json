@@ -1,0 +1,350 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-11T00:00:00Z",
+  "sourceDate": "2026-03-11",
+  "dailyFreeNeurons": 10000,
+  "freeTransformsPerIp": 10,
+  "categoryDescriptions": {
+    "holiday_seasonal": "Holiday costumes, cultural celebrations, and weather-inspired seasonal looks.",
+    "pop_culture": "Characters, archetypes, and fandom-inspired persona transforms.",
+    "artistic_styles": "Painterly, illustrated, and graphic-art remixes of the original photo.",
+    "retro_vintage": "Decade-specific nostalgia, analog photo finishes, and vintage portrait looks.",
+    "life_events": "Milestones, announcements, and celebration-ready portrait templates.",
+    "pets_animals": "Pet-focused character, celebration, and portrait transformations.",
+    "professional": "Polished portraits for work profiles, speakers, creators, and service pros.",
+    "travel_places": "Destination backdrops and travel fantasy scenes built around the subject.",
+    "utility_tools": "Practical cleanup, enhancement, cropping, and edit-assist tools.",
+    "fun_meme": "Playful novelty formats, collectibles, and internet-friendly remix ideas.",
+    "effects_filters": "Instant browser-only effects with no AI cost.",
+    "social_media": "Planned social template filters and creator-ready layouts referenced by the PRD summary.",
+    "food_drink": "Planned food-themed filter pack mentioned in the PRD category summary.",
+    "sports_fitness": "Planned athlete, sports, and workout-oriented transforms referenced by the PRD category summary.",
+    "fantasy_scifi": "Planned fantasy and sci-fi concepts referenced by the PRD category summary."
+  },
+  "categoryKeywords": {
+    "holiday_seasonal": ["holiday", "seasonal", "festive", "celebration"],
+    "pop_culture": ["character", "costume", "fandom", "persona"],
+    "artistic_styles": ["art", "painting", "illustration", "style"],
+    "retro_vintage": ["retro", "vintage", "nostalgia", "analog"],
+    "life_events": ["milestone", "celebration", "family", "announcement"],
+    "pets_animals": ["pet", "animal", "cute", "companion"],
+    "professional": ["headshot", "profile", "business", "career"],
+    "travel_places": ["travel", "destination", "vacation", "landmark"],
+    "utility_tools": ["utility", "edit", "enhance", "photo-tool"],
+    "fun_meme": ["fun", "meme", "novelty", "shareable"],
+    "effects_filters": ["effect", "filter", "instant", "browser"],
+    "social_media": ["social", "creator", "template", "post"],
+    "food_drink": ["food", "drink", "culinary", "recipe"],
+    "sports_fitness": ["sports", "fitness", "athlete", "workout"],
+    "fantasy_scifi": ["fantasy", "science-fiction", "adventure", "cosmic"]
+  },
+  "demoFilterSlugs": [
+    "grinch-ify",
+    "santa-claus",
+    "halloween-zombie",
+    "day-of-the-dead",
+    "superhero",
+    "cyberpunk-runner",
+    "oil-painting",
+    "anime-portrait",
+    "retro-yearbook-84",
+    "wedding-day",
+    "graduation",
+    "pet-to-pixar",
+    "professional-headshot",
+    "paris-eiffel-tower",
+    "remove-background",
+    "bobblehead",
+    "emoji-version",
+    "red-eye-fix",
+    "auto-color-correct",
+    "hdr-effect",
+    "passport-photo",
+    "social-media-resize",
+    "sepia-tone",
+    "black-and-white",
+    "vignette",
+    "duotone",
+    "glitch-art",
+    "mirror-kaleidoscope",
+    "tilt-shift",
+    "lomo-lomography",
+    "thermal-infrared",
+    "neon-glow"
+  ],
+  "seasonalMonthsBySlug": {
+    "grinch-ify": [11, 12],
+    "santa-claus": [11, 12],
+    "mrs-claus": [11, 12],
+    "elf-workshop": [11, 12],
+    "snowman-buddy": [12, 1, 2],
+    "ugly-christmas-sweater": [11, 12],
+    "halloween-zombie": [10],
+    "vampire-portrait": [10],
+    "witch-wizard": [10],
+    "day-of-the-dead": [10, 11],
+    "easter-bunny": [3, 4],
+    "cupid-valentine": [2],
+    "thanksgiving-pilgrim": [11],
+    "new-year-glam": [12, 1],
+    "fourth-of-july": [7],
+    "chinese-new-year-dragon": [1, 2],
+    "holi-festival-colors": [3],
+    "st-patricks-leprechaun": [3],
+    "mardi-gras-mask": [2, 3],
+    "spring-flower-crown": [3, 4, 5],
+    "summer-beach-vibes": [6, 7, 8],
+    "autumn-harvest": [9, 10, 11],
+    "winter-wonderland": [12, 1, 2],
+    "carnival-costume": [2, 3],
+    "diwali-festival": [10, 11],
+    "graduation": [5, 6],
+    "first-day-of-school": [8, 9],
+    "prom-night": [4, 5],
+    "mothers-day": [5],
+    "fathers-day": [6],
+    "pet-christmas-card": [11, 12],
+    "pet-halloween": [10],
+    "pet-valentine": [2],
+    "pet-graduation": [5, 6],
+    "tropical-beach": [6, 7, 8],
+    "northern-lights": [10, 11, 12, 1, 2, 3],
+    "cherry-blossom-japan": [3, 4],
+    "underwater-portrait": [6, 7, 8]
+  },
+  "typeDefaults": {
+    "img2img": {
+      "strength": 0.65,
+      "guidance": 7.5,
+      "outputWidth": 768,
+      "outputHeight": 768,
+      "variantCount": 2
+    },
+    "inpainting": {
+      "strength": 0.45,
+      "guidance": 8.0,
+      "outputWidth": 768,
+      "outputHeight": 768,
+      "variantCount": 1
+    },
+    "style-transfer": {
+      "strength": 0.7,
+      "guidance": 7.0,
+      "outputWidth": 768,
+      "outputHeight": 768,
+      "variantCount": 2
+    },
+    "utility": {
+      "strength": 0.0,
+      "guidance": 0.0,
+      "outputWidth": 0,
+      "outputHeight": 0,
+      "variantCount": 1
+    },
+    "overlay": {
+      "strength": 0.0,
+      "guidance": 0.0,
+      "outputWidth": 0,
+      "outputHeight": 0,
+      "variantCount": 1
+    }
+  },
+  "models": {
+    "flux2-klein-9b": {
+      "id": "@cf/black-forest-labs/flux-2-klein-9b",
+      "name": "FLUX.2 Klein 9B",
+      "provider": "Cloudflare Workers AI",
+      "family": "flux",
+      "neuronsPerRun": 150,
+      "estimatedSeconds": 4,
+      "supportsImg2Img": true,
+      "supportsInpainting": false,
+      "supportsStyleTransfer": true,
+      "supportsUtility": false,
+      "clientSide": false
+    },
+    "sd15-img2img": {
+      "id": "@cf/stabilityai/stable-diffusion-v1-5-img2img",
+      "name": "Stable Diffusion v1.5 Img2Img",
+      "provider": "Cloudflare Workers AI",
+      "family": "stable-diffusion",
+      "neuronsPerRun": 100,
+      "estimatedSeconds": 6,
+      "supportsImg2Img": true,
+      "supportsInpainting": false,
+      "supportsStyleTransfer": true,
+      "supportsUtility": false,
+      "clientSide": false
+    },
+    "sd15-inpainting": {
+      "id": "@cf/stabilityai/stable-diffusion-v1-5-inpainting",
+      "name": "Stable Diffusion v1.5 Inpainting",
+      "provider": "Cloudflare Workers AI",
+      "family": "stable-diffusion",
+      "neuronsPerRun": 120,
+      "estimatedSeconds": 6,
+      "supportsImg2Img": false,
+      "supportsInpainting": true,
+      "supportsStyleTransfer": false,
+      "supportsUtility": true,
+      "clientSide": false
+    },
+    "client-side": {
+      "id": "client-side",
+      "name": "Browser / Canvas",
+      "provider": "Client-side",
+      "family": "browser",
+      "neuronsPerRun": 0,
+      "estimatedSeconds": 0,
+      "supportsImg2Img": false,
+      "supportsInpainting": false,
+      "supportsStyleTransfer": false,
+      "supportsUtility": true,
+      "clientSide": true
+    },
+    "workers-ai": {
+      "id": "workers-ai",
+      "name": "Workers AI Utility Pipeline",
+      "provider": "Cloudflare Workers AI",
+      "family": "utility",
+      "neuronsPerRun": 80,
+      "estimatedSeconds": 3,
+      "supportsImg2Img": false,
+      "supportsInpainting": false,
+      "supportsStyleTransfer": false,
+      "supportsUtility": true,
+      "clientSide": false
+    },
+    "workers-ai-or-client-side": {
+      "id": "workers-ai-or-client-side",
+      "name": "Hybrid Utility Pipeline",
+      "provider": "Cloudflare Workers AI + Browser",
+      "family": "hybrid",
+      "neuronsPerRun": 30,
+      "estimatedSeconds": 2,
+      "supportsImg2Img": false,
+      "supportsInpainting": false,
+      "supportsStyleTransfer": false,
+      "supportsUtility": true,
+      "clientSide": false
+    }
+  },
+  "utilityOverrides": {
+    "remove-background": {
+      "model": "workers-ai-or-client-side",
+      "estimatedNeurons": 30,
+      "costEstimate": "Free or ≈30 neurons",
+      "requiresAI": false,
+      "clientSideOnly": false,
+      "estimatedSeconds": 2
+    },
+    "upscale-2x": {
+      "model": "workers-ai",
+      "estimatedNeurons": 80,
+      "estimatedSeconds": 3
+    },
+    "upscale-4x": {
+      "model": "workers-ai",
+      "estimatedNeurons": 120,
+      "estimatedSeconds": 4
+    },
+    "colorize-black-white": {
+      "model": "workers-ai",
+      "estimatedNeurons": 90,
+      "estimatedSeconds": 4
+    },
+    "restore-old-photo": {
+      "model": "workers-ai",
+      "estimatedNeurons": 110,
+      "estimatedSeconds": 5
+    },
+    "denoise-photo": {
+      "model": "workers-ai",
+      "estimatedNeurons": 45,
+      "estimatedSeconds": 2
+    },
+    "sharpen-enhance": {
+      "model": "workers-ai",
+      "estimatedNeurons": 55,
+      "estimatedSeconds": 2
+    },
+    "face-retouch": {
+      "model": "workers-ai",
+      "estimatedNeurons": 60,
+      "estimatedSeconds": 3
+    },
+    "red-eye-fix": {
+      "model": "client-side",
+      "estimatedNeurons": 0,
+      "costEstimate": "Free (client-side)",
+      "requiresAI": false,
+      "clientSideOnly": true,
+      "estimatedSeconds": 0
+    },
+    "auto-color-correct": {
+      "model": "client-side",
+      "estimatedNeurons": 0,
+      "costEstimate": "Free (client-side)",
+      "requiresAI": false,
+      "clientSideOnly": true,
+      "estimatedSeconds": 0
+    },
+    "hdr-effect": {
+      "model": "client-side",
+      "estimatedNeurons": 0,
+      "costEstimate": "Free (client-side)",
+      "requiresAI": false,
+      "clientSideOnly": true,
+      "estimatedSeconds": 0
+    },
+    "blur-background-bokeh": {
+      "model": "workers-ai",
+      "estimatedNeurons": 70,
+      "estimatedSeconds": 3
+    },
+    "change-background-color": {
+      "model": "workers-ai",
+      "estimatedNeurons": 75,
+      "estimatedSeconds": 3
+    },
+    "passport-photo": {
+      "model": "client-side",
+      "estimatedNeurons": 0,
+      "costEstimate": "Free (client-side)",
+      "requiresAI": false,
+      "clientSideOnly": true,
+      "estimatedSeconds": 0
+    },
+    "id-photo": {
+      "model": "client-side",
+      "estimatedNeurons": 0,
+      "costEstimate": "Free (client-side)",
+      "requiresAI": false,
+      "clientSideOnly": true,
+      "estimatedSeconds": 0
+    },
+    "social-media-resize": {
+      "model": "client-side",
+      "estimatedNeurons": 0,
+      "costEstimate": "Free (client-side)",
+      "requiresAI": false,
+      "clientSideOnly": true,
+      "estimatedSeconds": 0
+    },
+    "watermark-remover": {
+      "model": "workers-ai",
+      "estimatedNeurons": 120,
+      "estimatedSeconds": 5
+    },
+    "object-removal": {
+      "model": "sd15-inpainting",
+      "estimatedNeurons": 120,
+      "estimatedSeconds": 6
+    },
+    "face-swap-2-photos": {
+      "model": "workers-ai",
+      "estimatedNeurons": 150,
+      "estimatedSeconds": 5
+    }
+  }
+}

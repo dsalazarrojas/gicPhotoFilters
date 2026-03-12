@@ -1,0 +1,73 @@
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Privacy · GIC Photo Filters</title>
+      <meta name="description" content="Read the privacy posture for the gicPhotoFilters web shell, including local-only effects and planned AI processing behavior." />
+      <meta name="theme-color" content="#ec5b13" />
+      <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+      <link rel="canonical" id="canonical-link" href="https://gicphotofilters.gic.mx/privacy.html" />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="GIC Photo Filters" />
+      <meta property="og:title" content="Privacy · GIC Photo Filters" />
+      <meta property="og:description" content="Read the privacy posture for the gicPhotoFilters web shell, including local-only effects and planned AI processing behavior." />
+      <meta property="og:url" content="https://gicphotofilters.gic.mx/privacy.html" />
+      <meta property="og:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="Privacy · GIC Photo Filters" />
+      <meta name="twitter:description" content="Read the privacy posture for the gicPhotoFilters web shell, including local-only effects and planned AI processing behavior." />
+      <meta name="twitter:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <link rel="stylesheet" href="/docs/assets/style.css" />
+      <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://gicphotofilters.gic.mx", "logo": "https://gicphotofilters.gic.mx/docs/assets/favicon.svg"}</script>
+      <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "Privacy \u00b7 GIC Photo Filters", "url": "https://gicphotofilters.gic.mx/privacy.html", "description": "Read the privacy posture for the gicPhotoFilters web shell, including local-only effects and planned AI processing behavior."}</script>
+      <script type="module" src="/docs/assets/site.mjs"></script>
+    </head>
+    <body data-page="privacy" data-schema-type="PrivacyPolicy">
+      <div class="site-frame">
+        <header class="site-header" data-site-header></header>
+        <main>
+          <div class="section-shell">
+  <section class="static-hero">
+    <span class="page-eyebrow">Privacy</span>
+    <h1>Photos, demos, and data handling</h1>
+    <p class="lead">The web shell is explicit about what happens to photos: client-side effects never leave the device, AI-backed transforms are intended to flow through backend endpoints later, and the PRD assumes short-lived image retention for server-side processing.</p>
+  </section>
+  <section class="section static-grid">
+    <article class="detail-card">
+      <h3>Client-side effects</h3>
+      <p>Filters in the Effects &amp; Filters category render locally in the browser. Uploaded pixels stay on-device and the daily free usage budget does not apply.</p>
+    </article>
+    <article class="detail-card">
+      <h3>AI transform intent</h3>
+      <p>When <code>/api/transform</code> is connected, photos may be processed by AI infrastructure. The PRD targets temporary storage and deletion within 24 hours for those flows.</p>
+    </article>
+    <article class="detail-card">
+      <h3>No account required</h3>
+      <p>The shell does not add sign-in or identity collection. Demo budgeting is expressed as daily limits and neuron counters, not account-based profiles.</p>
+    </article>
+  </section>
+  <section class="section card">
+    <div class="section-heading">
+      <div>
+        <span class="page-eyebrow">What to publish at launch</span>
+        <h2>Recommended privacy copy upgrades</h2>
+      </div>
+      <p>The structure is ready now; finalize operational specifics when backend storage, logging, and support channels are locked in.</p>
+    </div>
+    <div class="markdown-content">
+      <ul>
+        <li>State retention windows for uploaded and transformed images.</li>
+        <li>List Google Analytics if <code>/docs/assets/site-config.json</code> is updated to enable it.</li>
+        <li>Document rate limiting, abuse prevention, and R2 cleanup behavior once the worker is live.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+        </main>
+        <footer class="site-footer" data-site-footer></footer>
+      </div>
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </body>
+    </html>

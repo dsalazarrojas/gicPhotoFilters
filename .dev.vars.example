@@ -1,0 +1,14 @@
+# Optional local overrides for `wrangler pages dev`.
+# Missing bindings intentionally fail loudly in the API so local setup gaps are obvious.
+
+MAX_FREE_TRANSFORMS_PER_IP=10
+MAX_FREE_NEURONS_PER_DAY=10000
+SEASONAL_FILTER=
+SEASONAL_FILTER_BONUS_TRANSFORMS=0
+MAX_UPLOAD_BYTES=5242880
+MAX_IMAGE_DIMENSION=1024
+RESULT_TTL_SECONDS=86400
+JOB_STATUS_TTL_SECONDS=86400
+
+# When present, the API loads filter metadata from this URL instead of `/docs/filters-index.json`.
+# FILTERS_INDEX_URL=http://127.0.0.1:8788/docs/filters-index.json

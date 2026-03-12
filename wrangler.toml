@@ -1,0 +1,29 @@
+name = "gic-photo-filters"
+compatibility_date = "2026-03-12"
+pages_build_output_dir = "."
+send_metrics = false
+
+[ai]
+binding = "AI"
+
+[[r2_buckets]]
+binding = "PHOTO_BUCKET"
+bucket_name = "gic-photo-filters-temp"
+preview_bucket_name = "gic-photo-filters-temp-preview"
+
+[[kv_namespaces]]
+binding = "USAGE_KV"
+id = "REPLACE_WITH_USAGE_KV_ID"
+preview_id = "REPLACE_WITH_USAGE_KV_PREVIEW_ID"
+
+[vars]
+DEMO_MODE = "true"
+MAX_FREE_NEURONS_PER_DAY = "10000"
+MAX_FREE_TRANSFORMS_PER_IP = "10"
+SEASONAL_FILTER = ""
+SEASONAL_FILTER_BONUS_TRANSFORMS = "0"
+MAX_UPLOAD_BYTES = "5242880"
+MAX_IMAGE_DIMENSION = "1024"
+RESULT_TTL_SECONDS = "86400"
+JOB_STATUS_TTL_SECONDS = "86400"
+TRANSFORM_TIMEOUT_MS = "45000"

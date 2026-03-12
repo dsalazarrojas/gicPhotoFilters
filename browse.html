@@ -1,0 +1,105 @@
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Browse filters · GIC Photo Filters</title>
+      <meta name="description" content="Search, sort, and filter the starter gicPhotoFilters catalog by category, type, model, demo availability, and seasonal relevance." />
+      <meta name="theme-color" content="#ec5b13" />
+      <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+      <link rel="canonical" id="canonical-link" href="https://gicphotofilters.gic.mx/browse.html" />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="GIC Photo Filters" />
+      <meta property="og:title" content="Browse filters · GIC Photo Filters" />
+      <meta property="og:description" content="Search, sort, and filter the starter gicPhotoFilters catalog by category, type, model, demo availability, and seasonal relevance." />
+      <meta property="og:url" content="https://gicphotofilters.gic.mx/browse.html" />
+      <meta property="og:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="Browse filters · GIC Photo Filters" />
+      <meta name="twitter:description" content="Search, sort, and filter the starter gicPhotoFilters catalog by category, type, model, demo availability, and seasonal relevance." />
+      <meta name="twitter:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <link rel="stylesheet" href="/docs/assets/style.css" />
+      <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://gicphotofilters.gic.mx", "logo": "https://gicphotofilters.gic.mx/docs/assets/favicon.svg"}</script>
+      <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "Browse filters \u00b7 GIC Photo Filters", "url": "https://gicphotofilters.gic.mx/browse.html", "description": "Search, sort, and filter the starter gicPhotoFilters catalog by category, type, model, demo availability, and seasonal relevance."}</script>
+      <script type="module" src="/docs/assets/site.mjs"></script>
+    </head>
+    <body data-page="browse">
+      <div class="site-frame">
+        <header class="site-header" data-site-header></header>
+        <main>
+          <div class="section-shell">
+  <div id="catalog-notice"></div>
+  <section class="page-header">
+    <span class="page-eyebrow">Browse the catalog</span>
+    <h1>Search, sort, and filter the starter manifest</h1>
+    <p class="lead">Full-text search spans filter names, descriptions, tags, models, and categories. URL hash state keeps your browse filters shareable on Cloudflare Pages.</p>
+  </section>
+
+  <section class="section">
+    <div class="browse-layout">
+      <aside class="sidebar-panel">
+        <div class="filter-group">
+          <label class="panel-title" for="browse-search">Search filters</label>
+          <input class="search-input" id="browse-search" type="search" placeholder="Search by name, tag, or category" />
+        </div>
+        <div class="filter-group">
+          <label class="panel-title" for="browse-sort">Sort by</label>
+          <select class="select-input" id="browse-sort">
+            <option value="popular">Popular</option>
+            <option value="alpha">A–Z</option>
+            <option value="category">Category</option>
+            <option value="newest">Newest</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="panel-title" for="filter-ai">AI required</label>
+          <select class="select-input" id="filter-ai">
+            <option value="all">All filters</option>
+            <option value="yes">AI required</option>
+            <option value="no">Client-side only</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="panel-title" for="filter-demo">Demo available</label>
+          <select class="select-input" id="filter-demo">
+            <option value="all">Show all</option>
+            <option value="yes">FREE on the web shell</option>
+            <option value="no">Requires your own API key</option>
+          </select>
+        </div>
+        <div class="inline-field">
+          <label for="filter-seasonal">Current season only</label>
+          <input id="filter-seasonal" type="checkbox" />
+        </div>
+        <div class="filter-group">
+          <div class="panel-title">Categories</div>
+          <div class="checkbox-list" id="filter-category-options"></div>
+        </div>
+        <div class="filter-group">
+          <div class="panel-title">Filter type</div>
+          <div class="checkbox-list" id="filter-type-options"></div>
+        </div>
+        <div class="filter-group">
+          <div class="panel-title">Model</div>
+          <div class="checkbox-list" id="filter-model-options"></div>
+        </div>
+        <button class="button-ghost" id="browse-clear" type="button">Clear filters</button>
+      </aside>
+
+      <div>
+        <div class="filter-toolbar">
+          <div id="results-meta" class="toolbar-caption">Loading starter catalog…</div>
+          <a class="button-link" href="/contact.html">Request a filter</a>
+        </div>
+        <div class="catalog-grid" id="browse-grid"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+        </main>
+        <footer class="site-footer" data-site-footer></footer>
+      </div>
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </body>
+    </html>

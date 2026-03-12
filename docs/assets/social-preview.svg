@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="GIC Photo Filters social preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="55%" stop-color="#ec5b13"/>
+      <stop offset="100%" stop-color="#16a5a0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" rx="32"/>
+  <circle cx="910" cy="180" r="120" fill="rgba(255,255,255,0.12)"/>
+  <circle cx="1030" cy="510" r="140" fill="rgba(255,255,255,0.08)"/>
+  <rect x="76" y="76" width="1048" height="478" rx="36" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.18)"/>
+  <text x="120" y="180" font-size="38" font-family="Inter,Arial,sans-serif" fill="#fff7f2">GIC Photo Filters</text>
+  <text x="120" y="270" font-size="78" font-weight="800" font-family="Inter,Arial,sans-serif" fill="#ffffff">200+ Fun Photo Filters</text>
+  <text x="120" y="352" font-size="78" font-weight="800" font-family="Inter,Arial,sans-serif" fill="#ffffff">with a Cloudflare Pages shell</text>
+  <text x="120" y="428" font-size="34" font-family="Inter,Arial,sans-serif" fill="#fff7f2">Browse, filter, upload, transform, and share with dark mode + starter catalog data.</text>
+  <rect x="120" y="470" width="290" height="76" rx="999" fill="#fff7f2"/>
+  <text x="174" y="520" font-size="32" font-weight="700" font-family="Inter,Arial,sans-serif" fill="#0f172a">Try a Filter</text>
+</svg>

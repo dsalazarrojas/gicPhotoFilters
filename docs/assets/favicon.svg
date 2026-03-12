@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="GIC Photo Filters">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ec5b13"/>
+      <stop offset="100%" stop-color="#16a5a0"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#0f172a"/>
+  <rect x="18" y="24" width="92" height="80" rx="20" fill="url(#g)" opacity="0.92"/>
+  <circle cx="64" cy="64" r="22" fill="#fff7f2"/>
+  <circle cx="64" cy="64" r="12" fill="#0f172a" opacity="0.92"/>
+  <path d="M92 32l8 8-8 8-8-8z" fill="#fff7f2"/>
+</svg>

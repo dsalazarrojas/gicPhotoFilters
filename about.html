@@ -1,0 +1,73 @@
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>About · GIC Photo Filters</title>
+      <meta name="description" content="Learn what the gicPhotoFilters Cloudflare Pages shell includes today and how it fits into the wider GIC ecosystem." />
+      <meta name="theme-color" content="#ec5b13" />
+      <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+      <link rel="canonical" id="canonical-link" href="https://gicphotofilters.gic.mx/about.html" />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="GIC Photo Filters" />
+      <meta property="og:title" content="About · GIC Photo Filters" />
+      <meta property="og:description" content="Learn what the gicPhotoFilters Cloudflare Pages shell includes today and how it fits into the wider GIC ecosystem." />
+      <meta property="og:url" content="https://gicphotofilters.gic.mx/about.html" />
+      <meta property="og:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="About · GIC Photo Filters" />
+      <meta name="twitter:description" content="Learn what the gicPhotoFilters Cloudflare Pages shell includes today and how it fits into the wider GIC ecosystem." />
+      <meta name="twitter:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <link rel="stylesheet" href="/docs/assets/style.css" />
+      <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://gicphotofilters.gic.mx", "logo": "https://gicphotofilters.gic.mx/docs/assets/favicon.svg"}</script>
+      <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "About \u00b7 GIC Photo Filters", "url": "https://gicphotofilters.gic.mx/about.html", "description": "Learn what the gicPhotoFilters Cloudflare Pages shell includes today and how it fits into the wider GIC ecosystem."}</script>
+      <script type="module" src="/docs/assets/site.mjs"></script>
+    </head>
+    <body data-page="about" data-schema-type="AboutPage">
+      <div class="site-frame">
+        <header class="site-header" data-site-header></header>
+        <main>
+          <div class="section-shell">
+  <section class="static-hero">
+    <span class="page-eyebrow">About the project</span>
+    <h1>What this website foundation ships today</h1>
+    <p class="lead">This repository now has a cohesive static website shell for Cloudflare Pages: shared CSS/JS assets, data-driven pages, search and filter UX, category landing pages, a dark-mode preference stored in <code>gic-theme</code>, and a realistic try-page flow that can later hand off to <code>/api/transform</code>.</p>
+  </section>
+
+  <section class="section static-grid">
+    <article class="detail-card">
+      <h3>Data-driven by design</h3>
+      <p>The site expects <code>/docs/filters-index.json</code> and already consumes a starter manifest at that path. Replace it with the generated production manifest when the full 205-filter catalog is ready.</p>
+    </article>
+    <article class="detail-card">
+      <h3>Shared front-end assets</h3>
+      <p>One stylesheet and one ES module power navigation, theming, catalog loading, filter cards, category hydration, upload handling, result preview generation, and optional GA4 wiring from <code>/docs/assets/site-config.json</code>.</p>
+    </article>
+    <article class="detail-card" id="app-availability">
+      <h3>Companion app positioning</h3>
+      <p>The site includes “Get the App” affordances, but it does not invent App Store listings or backend credentials. That handoff stays honest until the app ships.</p>
+    </article>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <span class="page-eyebrow">GIC ecosystem</span>
+        <h2>How the shell fits the wider product family</h2>
+      </div>
+      <p>The footer and about page create cross-links that match the PRD’s ecosystem story without touching backend code or the Swift app.</p>
+    </div>
+    <div class="static-grid">
+      <article class="detail-card"><h3>forms.gic.mx</h3><p>Cross-promotion spot for structured workflows and form-driven GIC tools.</p><a class="button-link" href="https://forms.gic.mx" target="_blank" rel="noreferrer">Visit forms.gic.mx</a></article>
+      <article class="detail-card"><h3>onePageApps.gic.mx</h3><p>Reference point for lightweight single-purpose tools and future app cross-links.</p><a class="button-link" href="https://onepageapps.gic.mx" target="_blank" rel="noreferrer">Visit onePageApps.gic.mx</a></article>
+      <article class="detail-card"><h3>gic.mx</h3><p>Primary brand home for launch messaging, product discovery, and broader ecosystem links.</p><a class="button-link" href="https://gic.mx" target="_blank" rel="noreferrer">Visit gic.mx</a></article>
+    </div>
+  </section>
+</div>
+
+        </main>
+        <footer class="site-footer" data-site-footer></footer>
+      </div>
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </body>
+    </html>

@@ -1,0 +1,154 @@
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>GIC Photo Filters · 200+ fun photo filters</title>
+      <meta name="description" content="Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters." />
+      <meta name="theme-color" content="#ec5b13" />
+      <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+      <link rel="canonical" id="canonical-link" href="https://gicphotofilters.gic.mx/index.html" />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="GIC Photo Filters" />
+      <meta property="og:title" content="GIC Photo Filters · 200+ fun photo filters" />
+      <meta property="og:description" content="Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters." />
+      <meta property="og:url" content="https://gicphotofilters.gic.mx/index.html" />
+      <meta property="og:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="GIC Photo Filters · 200+ fun photo filters" />
+      <meta name="twitter:description" content="Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters." />
+      <meta name="twitter:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <link rel="stylesheet" href="/docs/assets/style.css" />
+      <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://gicphotofilters.gic.mx", "logo": "https://gicphotofilters.gic.mx/docs/assets/favicon.svg"}</script>
+      <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "GIC Photo Filters \u00b7 200+ fun photo filters", "url": "https://gicphotofilters.gic.mx/index.html", "description": "Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters."}</script>
+      <script type="module" src="/docs/assets/site.mjs"></script>
+    </head>
+    <body data-page="home">
+      <div class="site-frame">
+        <header class="site-header" data-site-header></header>
+        <main>
+          <div class="section-shell">
+  <div id="catalog-notice"></div>
+  <section class="section hero">
+    <div class="glass-panel hero-copy">
+      <span class="page-eyebrow">AI-powered photo transformations</span>
+      <div>
+        <h1>200+ Fun Photo Filters — Transform Yourself in Seconds</h1>
+        <p class="lead">Turn into the Grinch, travel to Paris, get a professional headshot, or remix your next social post from one photo. This starter Cloudflare Pages shell is wired for browse, try, search, and category landing pages.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="button" href="/try.html">Try a Filter</a>
+        <a class="button-secondary" href="/browse.html">Browse the Catalog</a>
+        <a class="button-ghost" href="/about.html#app-availability">Get the App</a>
+      </div>
+      <div class="hero-stats" id="hero-stats"></div>
+    </div>
+    <div class="glass-panel hero-visual">
+      <div class="section-heading">
+        <div>
+          <span class="page-eyebrow">Filter of the season</span>
+          <h2 id="hero-filter-name">Loading…</h2>
+        </div>
+        <a class="button-link" href="/browse.html#seasonal=true">See seasonal highlights</a>
+      </div>
+      <div id="season-showcase"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <span class="page-eyebrow">How it works</span>
+        <h2>Upload, pick, share</h2>
+      </div>
+      <p>PRD-aligned flow: drag in a photo, choose from the searchable catalog, preview the transform, then download or share the result.</p>
+    </div>
+    <div class="step-grid">
+      <article class="step-card"><div class="step-card__index">1</div><h3>Upload your photo</h3><p>Drag and drop, browse the photo library, or paste directly from the clipboard. The shell resizes images client-side to keep uploads lightweight.</p></article>
+      <article class="step-card"><div class="step-card__index">2</div><h3>Pick a filter</h3><p>Browse category pages, search by tags, or open a specific filter from the curated starter catalog. Filter metadata lives at <code>/docs/filters-index.json</code>.</p></article>
+      <article class="step-card"><div class="step-card__index">3</div><h3>Download &amp; share</h3><p>Use the result slider, switch between variants, copy share text, and preview the free-usage dashboard before backend wiring is complete.</p></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <span class="page-eyebrow">Seasonal highlights</span>
+        <h2>Dynamic cards powered by the catalog manifest</h2>
+      </div>
+      <p>These cards pull from the current month’s <code>seasonalMonths</code> values, with a curated fallback when the full manifest is still being assembled.</p>
+    </div>
+    <div class="catalog-grid" id="seasonal-grid"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <span class="page-eyebrow">Top categories</span>
+        <h2>SEO landing pages ready to expand</h2>
+      </div>
+      <p>Each category page is static HTML with shared JS components, unique metadata, and automatic catalog hydration when new filters land.</p>
+    </div>
+    <div class="category-grid" id="category-grid"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <span class="page-eyebrow">Popular filters</span>
+        <h2>Starter catalog favorites</h2>
+      </div>
+      <p>Curated popularity sorting provides strong default recommendations while the real analytics and expanded manifest are still being wired in.</p>
+    </div>
+    <div class="catalog-grid" id="popular-grid"></div>
+  </section>
+
+  <section class="section">
+    <div class="app-card" id="app-availability">
+      <div class="section-heading">
+        <div>
+          <span class="page-eyebrow">Companion app</span>
+          <h2>Web-first shell, app-ready positioning</h2>
+        </div>
+        <a class="button-secondary" href="/about.html#app-availability">See the app roadmap</a>
+      </div>
+      <div class="static-grid">
+        <div class="detail-card">
+          <h3>Free web demos</h3>
+          <p>Use the browser for discovery, dark-mode browsing, and fast demo transforms with daily free usage indicators.</p>
+        </div>
+        <div class="detail-card">
+          <h3>Bring your own key later</h3>
+          <p>The UX already makes room for “Get the app” and “uses your API key” messaging without fabricating backend credentials.</p>
+        </div>
+        <div class="detail-card">
+          <h3>Shared catalog source</h3>
+          <p>The companion app can point at the same manifest path once the full generated catalog replaces the starter data.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="cta-band card">
+      <div class="section-heading">
+        <div>
+          <span class="page-eyebrow">Ready to test the shell?</span>
+          <h2>Upload a photo, pick a filter, share the fun</h2>
+        </div>
+        <p>The static foundation is ready for Cloudflare Pages deployment, catalog iteration, and future worker integration.</p>
+      </div>
+      <div class="button-row">
+        <a class="button" href="/try.html">Open the Try page</a>
+        <a class="button-ghost" href="/categories/index.html">Explore all categories</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+        </main>
+        <footer class="site-footer" data-site-footer></footer>
+      </div>
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </body>
+    </html>

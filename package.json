@@ -1,0 +1,8 @@
+{
+  "name": "gic-photo-filters",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:backend": "find functions -name '*.js' -print0 | xargs -0 -n1 node --check"
+  }
+}

@@ -1,0 +1,113 @@
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Try a filter · GIC Photo Filters</title>
+      <meta name="description" content="Upload a photo, preview transform flows, test client-side effects, and browse related filters in the gicPhotoFilters starter shell." />
+      <meta name="theme-color" content="#ec5b13" />
+      <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+      <link rel="canonical" id="canonical-link" href="https://gicphotofilters.gic.mx/try.html" />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="GIC Photo Filters" />
+      <meta property="og:title" content="Try a filter · GIC Photo Filters" />
+      <meta property="og:description" content="Upload a photo, preview transform flows, test client-side effects, and browse related filters in the gicPhotoFilters starter shell." />
+      <meta property="og:url" content="https://gicphotofilters.gic.mx/try.html" />
+      <meta property="og:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="Try a filter · GIC Photo Filters" />
+      <meta name="twitter:description" content="Upload a photo, preview transform flows, test client-side effects, and browse related filters in the gicPhotoFilters starter shell." />
+      <meta name="twitter:image" content="https://gicphotofilters.gic.mx/docs/assets/social-preview.svg" />
+      <link rel="stylesheet" href="/docs/assets/style.css" />
+      <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://gicphotofilters.gic.mx", "logo": "https://gicphotofilters.gic.mx/docs/assets/favicon.svg"}</script>
+      <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "Try a filter \u00b7 GIC Photo Filters", "url": "https://gicphotofilters.gic.mx/try.html", "description": "Upload a photo, preview transform flows, test client-side effects, and browse related filters in the gicPhotoFilters starter shell."}</script>
+      <script type="module" src="/docs/assets/site.mjs"></script>
+    </head>
+    <body data-page="try">
+      <div class="site-frame">
+        <header class="site-header" data-site-header></header>
+        <main>
+          <div class="section-shell">
+  <div id="catalog-notice"></div>
+  <section class="filter-summary">
+    <div class="breadcrumb" id="try-breadcrumb"></div>
+    <div id="try-filter-summary"></div>
+  </section>
+
+  <section class="section">
+    <div class="try-layout">
+      <aside class="upload-panel">
+        <div class="section-heading">
+          <div>
+            <span class="page-eyebrow">Filter selection</span>
+            <h2 id="selection-title">Popular filters to start</h2>
+          </div>
+          <a class="button-link" href="/browse.html">Browse full shell</a>
+        </div>
+        <div class="selection-grid" id="try-selection"></div>
+        <div class="upload-dropzone" id="upload-dropzone" role="button" tabindex="0" aria-describedby="upload-hint">
+          <strong>Drop a JPEG, PNG, or WebP here</strong>
+          <p id="upload-hint" class="microcopy">Drag &amp; drop, click to browse, or paste from the clipboard. Best results come from a clear face photo under 5MB.</p>
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+          <span class="badge badge--brand">Client-side resize to 1024px</span>
+        </div>
+        <div class="detail-card hidden" id="effects-controls">
+          <label class="panel-title" for="effects-intensity">Effect intensity</label>
+          <input id="effects-intensity" type="range" min="0" max="100" value="65" />
+          <p class="microcopy">Use this slider for instant client-side effects and live re-renders.</p>
+        </div>
+        <div class="progress" id="try-progress" hidden><span></span></div>
+        <p class="microcopy" id="try-status">Upload a clear face photo for the best result.</p>
+        <div class="upload-actions">
+          <button class="button" id="transform-button" type="button">Transform — FREE ✨</button>
+          <button class="button-ghost" id="reset-photo-button" type="button">Try another photo</button>
+        </div>
+        <details class="detail-card" open>
+          <summary class="panel-title">Usage dashboard</summary>
+          <div class="usage-grid" id="usage-grid"></div>
+        </details>
+      </aside>
+
+      <div class="stage-stack">
+        <section class="stage-panel">
+          <div class="filter-card__badges" id="stage-note"></div>
+          <div id="stage-slot"></div>
+          <div class="variant-list" id="variant-list"></div>
+          <div class="upload-actions hidden" id="result-actions">
+            <button class="button-secondary" id="download-button" type="button">Download result</button>
+            <button class="button-ghost" id="share-button" type="button">Share</button>
+          </div>
+        </section>
+
+        <section class="detail-card">
+          <div class="tabs">
+            <button class="tab-button" type="button" data-tab-target="overview" aria-selected="true">Overview</button>
+            <button class="tab-button" type="button" data-tab-target="help" aria-selected="false">Help</button>
+            <button class="tab-button" type="button" data-tab-target="tech" aria-selected="false">Tech</button>
+          </div>
+          <div class="tab-panel" id="tab-overview"></div>
+          <div class="tab-panel" id="tab-help" hidden></div>
+          <div class="tab-panel" id="tab-tech" hidden></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <span class="page-eyebrow">Related filters</span>
+        <h2>Keep the same vibe, switch the concept</h2>
+      </div>
+      <p>Same-category recommendations give the try page enough depth to double as the filter detail experience for the starter shell.</p>
+    </div>
+    <div class="catalog-grid" id="related-grid"></div>
+  </section>
+</div>
+
+        </main>
+        <footer class="site-footer" data-site-footer></footer>
+      </div>
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </body>
+    </html>
