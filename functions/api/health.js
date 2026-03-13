@@ -136,7 +136,7 @@ export async function onRequestGet(context) {
           neuronsLimit: usage.neuronsLimit,
           neuronsRemaining: usage.neuronsRemaining,
           usage,
-          message: `Connected — ${usage.neuronsRemaining} neurons available today.`,
+          message: "Connected to Cloudflare Workers AI.",
           proxy: {
             transformEndpoint: "/api/transform",
             authTransport: "https-request-headers",

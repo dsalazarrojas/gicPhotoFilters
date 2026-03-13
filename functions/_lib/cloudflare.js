@@ -124,14 +124,20 @@ export function readCloudflareCredentials(request, { optional = true } = {}) {
 }
 
 export async function fetchCloudflareUsage({ accountId, apiToken }) {
+  // Cloudflare does not expose a public REST endpoint for Workers AI neuron usage.
+  // We verify credentials by hitting the AI models search endpoint, which requires
+  // a valid account ID and a token with Workers AI access.
   let response;
   try {
-    response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/usage`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
+    response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/search?per_page=1`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+        },
       },
-    });
+    );
   } catch (error) {
     throw new ApiError(502, "cloudflare_unreachable", "Unable to reach Cloudflare right now. Please try again.", {
       cause: error instanceof Error ? error.message : String(error),
@@ -141,30 +147,18 @@ export async function fetchCloudflareUsage({ accountId, apiToken }) {
   const payload = await response.json().catch(() => null);
   if (!response.ok || payload?.success === false) {
     throw buildCloudflareError(response.status, payload, {
-      defaultCode: "cloudflare_usage_failed",
-      defaultMessage: "Cloudflare could not return Workers AI usage right now.",
+      defaultCode: "cloudflare_credentials_invalid",
+      defaultMessage: "Could not verify Cloudflare credentials.",
       permissionMessage: "Token doesn't have Workers AI permission — re-create with ai:read scope.",
     });
   }
 
-  const neurons = payload?.result?.neurons || payload?.result || {};
-  const neuronsUsed = Number(neurons.used);
-  const neuronsLimit = Number(neurons.limit);
-  const neuronsRemaining = Number.isFinite(Number(neurons.remaining))
-    ? Number(neurons.remaining)
-    : neuronsLimit - neuronsUsed;
-
-  assert(
-    Number.isFinite(neuronsUsed) && Number.isFinite(neuronsLimit) && Number.isFinite(neuronsRemaining),
-    502,
-    "cloudflare_usage_invalid",
-    "Cloudflare returned an unexpected usage response.",
-  );
-
+  // Neuron usage is not available via Cloudflare's REST API.
+  // Users can check their usage at dash.cloudflare.com → Workers AI.
   return {
-    neuronsUsed,
-    neuronsLimit,
-    neuronsRemaining: Math.max(0, neuronsRemaining),
+    neuronsUsed: null,
+    neuronsLimit: null,
+    neuronsRemaining: null,
   };
 }
 
