@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import re
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,7 @@ REVIEW_DIR = MODELS_DIR / "review"
 GENERATED_DIR = REVIEW_DIR / "generated"
 STATE_PATH = REVIEW_DIR / "work_items.json"
 MANIFEST_PATH = REPO_ROOT / "docs" / "filters-index.json"
+SITE_PREVIEWS_DIR = REPO_ROOT / "docs" / "assets" / "filter-previews"
 DEFAULT_API_URL = "https://photofilters.gic.mx/api/transform"
 
 
@@ -240,3 +242,86 @@ def find_item(state: dict[str, Any], item_id: str) -> dict[str, Any] | None:
 
 def generated_pair_dir(item_id: str) -> Path:
     return GENERATED_DIR / item_id
+
+
+def attempt_suffix(attempt: int) -> str:
+    alphabet = "abcdefghijklmnopqrstuvwxyz"
+    attempt_index = max(1, int(attempt)) - 1
+    if attempt_index < len(alphabet):
+        return alphabet[attempt_index]
+    return f"v{attempt}"
+
+
+def run_command(args: list[str]) -> None:
+    subprocess.run(args, check=True, cwd=REPO_ROOT)
+
+
+def optimize_preview_image(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    run_command(
+        [
+            "magick",
+            str(source),
+            "-auto-orient",
+            "-thumbnail",
+            "400x400^",
+            "-gravity",
+            "center",
+            "-extent",
+            "400x400",
+            "-strip",
+            "-quality",
+            "80",
+            str(destination),
+        ]
+    )
+
+
+def publish_item_to_site(item: dict[str, Any]) -> dict[str, str]:
+    before_asset = item.get("beforeAsset")
+    after_asset = item.get("afterAsset")
+    if not before_asset or not after_asset:
+        raise ValueError("Item does not have generated before/after assets to publish.")
+
+    before_source = REPO_ROOT / before_asset
+    after_source = REPO_ROOT / after_asset
+    if not before_source.exists() or not after_source.exists():
+        raise FileNotFoundError("Generated review assets are missing on disk.")
+
+    suffix = attempt_suffix(item.get("attempt", 1))
+    slug = item["filterSlug"]
+    before_dest = SITE_PREVIEWS_DIR / f"{slug}_before_{suffix}.webp"
+    after_dest = SITE_PREVIEWS_DIR / f"{slug}_after_{suffix}.webp"
+    optimize_preview_image(before_source, before_dest)
+    optimize_preview_image(after_source, after_dest)
+
+    before_rel = relative_to_repo(before_dest)
+    after_rel = relative_to_repo(after_dest)
+
+    manifest = read_json(MANIFEST_PATH, default={"filters": []})
+    filters = manifest.get("filters", [])
+    filter_entry = next((row for row in filters if row.get("id") == item["filterId"]), None)
+    if not filter_entry:
+        raise KeyError(f"Filter not found in manifest: {item['filterId']}")
+
+    preview_images = list(filter_entry.get("previewImages") or [])
+    updated = False
+    for row in preview_images:
+        if row.get("before") == before_rel or row.get("after") == after_rel:
+            row["before"] = before_rel
+            row["after"] = after_rel
+            updated = True
+            break
+    if not updated:
+        preview_images.append({"before": before_rel, "after": after_rel})
+
+    filter_entry["previewImages"] = preview_images
+    first_preview = preview_images[0]
+    filter_entry["previewBefore"] = first_preview["before"]
+    filter_entry["previewAfter"] = first_preview["after"]
+    write_json(MANIFEST_PATH, manifest)
+
+    return {
+        "before": before_rel,
+        "after": after_rel,
+    }

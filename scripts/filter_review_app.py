@@ -10,6 +10,7 @@ from filter_workflow_common import (
     discover_model_images,
     find_item,
     is_supported_human_filter,
+    publish_item_to_site,
     load_manifest_filters,
     load_state,
     make_item_id,
@@ -390,6 +391,9 @@ def decision(item_id: str):
         item["status"] = "accepted"
         item["reviewedAt"] = now_iso()
         item["updatedAt"] = now_iso()
+        published = publish_item_to_site(item)
+        item["publishedPreview"] = published
+        item["publishedAt"] = now_iso()
     elif action == "reject":
         item["status"] = "rejected"
         item["reviewedAt"] = now_iso()

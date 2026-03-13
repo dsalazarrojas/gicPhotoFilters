@@ -28,7 +28,7 @@ function buildCustomFilter(filterDefinition = {}) {
     name: filterDefinition.name || "Custom Filter",
     category,
     description: filterDefinition.description || "Custom prompt built on the website builder.",
-    type: filterDefinition.model === "sd15-inpainting" ? "inpainting" : "img2img",
+    type: "img2img",
     model: filterDefinition.model,
     prompt: filterDefinition.prompt,
     negativePrompt: filterDefinition.negativePrompt || "",

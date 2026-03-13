@@ -20,8 +20,8 @@ GZIP_OUTPUT_PATH = ROOT / 'docs' / 'filters-index.json.gz'
 
 MODEL_NORMALIZATION = {
     'FLUX.2 klein': 'flux2-klein-9b',
-    'SD v1.5 img2img': 'sd15-img2img',
-    'SD v1.5 Inpainting': 'sd15-inpainting',
+    'SD v1.5 img2img': 'flux2-klein-9b',
+    'SD v1.5 Inpainting': 'flux2-klein-9b',
     'client-side': 'client-side',
     'Workers AI': 'workers-ai',
     'Workers AI / client-side': 'workers-ai-or-client-side',
@@ -132,9 +132,21 @@ def normalize_type(raw_type: str) -> str:
     return raw_type
 
 
-def build_prompt(summary: str, filter_type: str) -> str:
+def effective_type(filter_type: str, model_key: str) -> str:
+    if model_key == 'client-side':
+        return filter_type
+    if filter_type in {'style-transfer', 'inpainting'}:
+        return 'img2img'
+    return filter_type
+
+
+def build_prompt(summary: str, filter_type: str, original_type: str | None = None) -> str:
     suffix = PROMPT_SUFFIXES[filter_type]
     summary = summary.rstrip('.')
+    if original_type == 'inpainting':
+        summary = f'{summary}, transform the whole image coherently without requiring a mask'
+    elif original_type == 'style-transfer':
+        summary = f'{summary}, apply a strong stylistic transformation while keeping the subject recognizable'
     return summary if not suffix else f'{summary}, {suffix}'
 
 
@@ -251,9 +263,14 @@ def build_share_text(name: str, emoji: str, is_demo: bool, client_side_only: boo
 
 def build_filter_record(filter_row: dict[str, Any], config: dict[str, Any]) -> OrderedDict[str, Any]:
     slug = filter_row['slug']
-    type_defaults = config['typeDefaults'][filter_row['type']]
     utility_override = config['utilityOverrides'].get(slug, {})
-    model_key = utility_override.get('model', filter_row['model'])
+    original_type = filter_row['type']
+    original_model_key = utility_override.get('model', filter_row['model'])
+    model_key = original_model_key
+    if original_model_key in {'sd15-img2img', 'sd15-inpainting'}:
+        model_key = 'flux2-klein-9b'
+    filter_type = effective_type(original_type, model_key)
+    type_defaults = config['typeDefaults'][filter_type]
     model_meta = config['models'][model_key]
     seasonal_months = month_order(config['seasonalMonthsBySlug'].get(slug, []))
     is_seasonal = bool(seasonal_months)
@@ -276,7 +293,7 @@ def build_filter_record(filter_row: dict[str, Any], config: dict[str, Any]) -> O
             ' '.join(tags),
         ]
     ).lower()
-    prompt = build_prompt(filter_row['summary'], filter_row['type'])
+    prompt = build_prompt(filter_row['summary'], filter_type, original_type=original_type)
     record: OrderedDict[str, Any] = OrderedDict()
     record['number'] = filter_row['number']
     record['id'] = f"{slug}--{filter_row['category']}"
@@ -289,10 +306,16 @@ def build_filter_record(filter_row: dict[str, Any], config: dict[str, Any]) -> O
     record['description'] = description
     record['promptSummary'] = filter_row['summary']
     record['prompt'] = prompt
-    record['negativePrompt'] = NEGATIVE_PROMPTS[filter_row['type']]
-    record['type'] = filter_row['type']
+    record['negativePrompt'] = NEGATIVE_PROMPTS[filter_type]
+    record['type'] = filter_type
     record['model'] = model_key
     record['modelName'] = model_meta['name']
+    if original_type != filter_type:
+        record['sourceType'] = original_type
+    if original_model_key != model_key:
+        record['sourceModel'] = original_model_key
+    if original_type != filter_type or original_model_key != model_key:
+        record['migrationNote'] = 'Migrated to a FLUX img2img-compatible implementation for the website runtime.'
     record['systemImage'] = filter_row['systemImage']
     record['strength'] = type_defaults['strength']
     record['guidance'] = type_defaults['guidance']
@@ -313,6 +336,26 @@ def build_filter_record(filter_row: dict[str, Any], config: dict[str, Any]) -> O
     record['tryPath'] = f"try.html?id={record['id']}"
     record['categoryPath'] = f"categories/{filter_row['categoryPageSlug']}.html"
     return record
+
+
+def preserve_existing_previews(filters: list[OrderedDict[str, Any]]) -> None:
+    if not OUTPUT_PATH.exists():
+        return
+    existing = load_json(OUTPUT_PATH)
+    preview_map = {
+        item['id']: item for item in existing.get('filters', [])
+        if item.get('previewImages') or item.get('previewBefore') or item.get('previewAfter')
+    }
+    for item in filters:
+        existing_item = preview_map.get(item['id'])
+        if not existing_item:
+            continue
+        if existing_item.get('previewImages'):
+            item['previewImages'] = existing_item['previewImages']
+        if existing_item.get('previewBefore'):
+            item['previewBefore'] = existing_item['previewBefore']
+        if existing_item.get('previewAfter'):
+            item['previewAfter'] = existing_item['previewAfter']
 
 
 def build_categories(filters: list[OrderedDict[str, Any]], category_summary: dict[str, dict[str, Any]], config: dict[str, Any]) -> list[OrderedDict[str, Any]]:
@@ -406,6 +449,7 @@ def build_catalog() -> OrderedDict[str, Any]:
     category_summary = parse_category_summary(prd_text)
     parsed_filters = parse_filter_sections(prd_text, category_summary)
     filters = [build_filter_record(item, config) for item in parsed_filters]
+    preserve_existing_previews(filters)
     categories = build_categories(filters, category_summary, config)
     actual_categories = {category['slug'] for category in categories}
     planned_categories = build_planned_categories(category_summary, actual_categories, config)

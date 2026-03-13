@@ -79,8 +79,6 @@ const FALLBACK_CATALOG = {
   models: {
     'flux2-klein-9b': { id: '@cf/black-forest-labs/flux-2-klein-9b', name: 'FLUX.2 Klein 9B', neuronsPerRun: 150 },
     'flux2-klein-4b': { id: '@cf/black-forest-labs/flux-2-klein-4b', name: 'FLUX.2 Klein 4B', neuronsPerRun: 80 },
-    'sd15-img2img': { id: '@cf/stabilityai/stable-diffusion-v1-5-img2img', name: 'Stable Diffusion v1.5 Img2Img', neuronsPerRun: 100 },
-    'sd15-inpainting': { id: '@cf/stabilityai/stable-diffusion-v1-5-inpainting', name: 'Stable Diffusion v1.5 Inpainting', neuronsPerRun: 120 },
     'client-side': { id: 'client-side', name: 'Browser (no AI)', neuronsPerRun: 0 },
   },
   filters: [
@@ -110,7 +108,7 @@ const FALLBACK_CATALOG = {
       category: 'professional',
       description: 'Upgrade a casual portrait into a clean, studio-style business headshot with neutral lighting.',
       type: 'img2img',
-      model: 'sd15-img2img',
+      model: 'flux2-klein-9b',
       variantCount: 2,
       isDemoFilter: true,
       requiresAI: true,
@@ -143,8 +141,8 @@ const FALLBACK_CATALOG = {
       slug: 'background-cleaner',
       category: 'utility_tools',
       description: 'Remove clutter and rebuild a clean backdrop for listings, IDs, and product-ready shots.',
-      type: 'inpainting',
-      model: 'sd15-inpainting',
+      type: 'img2img',
+      model: 'flux2-klein-9b',
       variantCount: 1,
       isDemoFilter: true,
       requiresAI: true,
@@ -321,7 +319,7 @@ function createCustomFilterEntry(rawDefinition, catalog) {
     requiresAI: true,
     clientSideOnly: false,
     isDemoFilter: false,
-    type: definition.model === 'sd15-inpainting' ? 'inpainting' : 'img2img',
+    type: 'img2img',
     tags: definition.tags,
     shareText: `Try my custom filter “${definition.name}”:`,
     helpMarkdown: `## Shared custom filter\n- Prompt: ${definition.prompt}\n- Model: ${definition.model}\n- Add your Cloudflare key in Settings if this deployment blocks custom demo runs.`,
@@ -468,6 +466,7 @@ function withDefaults(filter, index, models = {}, categoryMap = CATEGORY_MAP) {
     .filter(Boolean)
     .join(' '))
     .toLowerCase();
+  const firstPreview = Array.isArray(filter.previewImages) && filter.previewImages.length ? filter.previewImages[0] : null;
 
   return {
     strength: typeof filter.strength === 'number' ? filter.strength : 0.62,
@@ -497,8 +496,8 @@ function withDefaults(filter, index, models = {}, categoryMap = CATEGORY_MAP) {
     popularityScore,
     publishedAt,
     searchText,
-    previewBefore: filter.previewBefore || generatePreviewData(filter, 'before'),
-    previewAfter: filter.previewAfter || generatePreviewData(filter, 'after'),
+    previewBefore: filter.previewBefore || firstPreview?.before || generatePreviewData(filter, 'before'),
+    previewAfter: filter.previewAfter || firstPreview?.after || generatePreviewData(filter, 'after'),
     systemImage: filter.systemImage || 'camera',
     ...filter,
   };
@@ -2434,8 +2433,6 @@ async function initBuildPage() {
   const builderModels = [
     { id: 'flux2-klein-9b', tagline: 'Highest quality', bestFor: 'Faces, character styles, polished artistic looks', recommended: true },
     { id: 'flux2-klein-4b', tagline: 'Faster results', bestFor: 'Quick iterations and lighter creative edits' },
-    { id: 'sd15-img2img', tagline: 'Classic look', bestFor: 'Painterly, retro, and softer style transfers' },
-    { id: 'sd15-inpainting', tagline: 'Mask-based edits', bestFor: 'Specific region replacement — web mask tools coming soon', disabled: true },
   ].map((entry) => ({
     ...entry,
     label: MODEL_OPTIONS.find((option) => option.id === entry.id)?.label || entry.id,
@@ -2444,7 +2441,7 @@ async function initBuildPage() {
 
   const suggestedFilters = catalog.filters.filter((filter) => filter.prompt && !filter.clientSideOnly);
   const initialPreferredModel = loadPreferredModel();
-  const resolvedInitialModel = initialPreferredModel !== 'default' && initialPreferredModel !== 'sd15-inpainting'
+  const resolvedInitialModel = initialPreferredModel !== 'default'
     ? initialPreferredModel
     : 'flux2-klein-9b';
   const state = {
@@ -2455,7 +2452,7 @@ async function initBuildPage() {
     prompt: '',
     negativePrompt: '',
     model: resolvedInitialModel,
-    manualModelSelection: initialPreferredModel !== 'default' && initialPreferredModel !== 'sd15-inpainting',
+    manualModelSelection: initialPreferredModel !== 'default',
     strength: 0.65,
     guidance: 7.5,
     width: 768,
@@ -2752,10 +2749,6 @@ async function initBuildPage() {
       showToast('Write your prompt and choose a model first.');
       return;
     }
-    if (previewFilter.model === 'sd15-inpainting') {
-      showToast('Web inpainting masks are coming soon. Pick another model for now.');
-      return;
-    }
     if (!state.sourceBlob || !state.sourceDataUrl) {
       showToast('Upload a photo before running the builder test.');
       return;
@@ -2974,7 +2967,7 @@ async function initBuildPage() {
   window.addEventListener('gic:model-preference-changed', (event) => {
     if (state.manualModelSelection) return;
     const nextModel = event.detail?.model;
-    if (nextModel && nextModel !== 'default' && nextModel !== 'sd15-inpainting') {
+    if (nextModel && nextModel !== 'default') {
       state.model = nextModel;
       syncFormUi();
     }

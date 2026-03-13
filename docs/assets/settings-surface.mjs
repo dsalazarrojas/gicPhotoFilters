@@ -22,8 +22,6 @@ export const MODEL_OPTIONS = Object.freeze([
   { id: 'default', label: 'Use filter default', description: 'Keeps the catalog model or builder choice unchanged.' },
   { id: 'flux2-klein-9b', label: 'FLUX.2 Klein 9B', description: 'Highest quality for faces, characters, and polished styles.' },
   { id: 'flux2-klein-4b', label: 'FLUX.2 Klein 4B', description: 'Faster, lighter option for rapid experiments.' },
-  { id: 'sd15-img2img', label: 'SD v1.5 img2img', description: 'Classic painterly and retro-friendly image-to-image results.' },
-  { id: 'sd15-inpainting', label: 'SD v1.5 Inpainting', description: 'Best for masked edits. Web mask tools are coming soon.' },
 ]);
 
 const STORAGE_COPY = {
@@ -209,7 +207,7 @@ function createSurfaceMarkup() {
               </div>
               <div class="settings-surface__model-grid" data-model-grid>
                 ${MODEL_OPTIONS.map((model) => `
-                  <button class="button-ghost settings-surface__model-card" type="button" data-model-choice="${model.id}" ${model.id === 'sd15-inpainting' ? 'data-coming-soon="true"' : ''}>
+                  <button class="button-ghost settings-surface__model-card" type="button" data-model-choice="${model.id}">
                     <strong>${escapeHtml(model.label)}</strong>
                     <span>${escapeHtml(model.description)}</span>
                   </button>`).join('')}
