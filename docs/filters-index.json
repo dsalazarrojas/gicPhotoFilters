@@ -1105,7 +1105,15 @@
       "shareText": "I just tried the Mrs. Claus filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "mrs. claus holiday & seasonal transform into mrs. claus with spectacles, white hair, red dress. holiday seasonal festive celebration mrs claus spectacles white hair red dress",
       "tryPath": "try.html?id=mrs-claus--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/mrs-claus_before_a.webp",
+          "after": "docs/assets/filter-previews/mrs-claus_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/mrs-claus_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/mrs-claus_after_a.webp"
     },
     {
       "number": 4,
@@ -1160,7 +1168,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/elf-workshop_before_a.webp",
+          "after": "docs/assets/filter-previews/elf-workshop_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/elf-workshop_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/elf-workshop_after_a.webp"
     },
     {
       "number": 5,
@@ -1214,7 +1230,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/snowman-buddy_before_a.webp",
+          "after": "docs/assets/filter-previews/snowman-buddy_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/snowman-buddy_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/snowman-buddy_after_a.webp"
     },
     {
       "number": 6,
@@ -1264,7 +1288,15 @@
       "shareText": "I just tried the Ugly Christmas Sweater filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "ugly christmas sweater holiday & seasonal dress this person in the most garish ugly christmas sweater. holiday seasonal festive celebration ugly christmas sweater dress most garish",
       "tryPath": "try.html?id=ugly-christmas-sweater--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/ugly-christmas-sweater_before_a.webp",
+          "after": "docs/assets/filter-previews/ugly-christmas-sweater_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/ugly-christmas-sweater_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/ugly-christmas-sweater_after_a.webp"
     },
     {
       "number": 7,
@@ -1315,7 +1347,15 @@
       "shareText": "I just tried the Halloween Zombie filter free on GIC Photo Filters \ud83c\udf84",
       "searchText": "halloween zombie holiday & seasonal transform into a realistic zombie with torn clothes and pale skin. holiday seasonal festive celebration halloween zombie realistic torn clothes pale skin demo",
       "tryPath": "try.html?id=halloween-zombie--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/halloween-zombie_before_a.webp",
+          "after": "docs/assets/filter-previews/halloween-zombie_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/halloween-zombie_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/halloween-zombie_after_a.webp"
     },
     {
       "number": 8,
@@ -1366,7 +1406,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/vampire-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/vampire-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/vampire-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/vampire-portrait_after_a.webp"
     },
     {
       "number": 9,
@@ -1467,7 +1515,15 @@
       "shareText": "I just tried the Day of the Dead filter free on GIC Photo Filters \ud83c\udf84",
       "searchText": "day of the dead holiday & seasonal apply traditional d\u00eda de los muertos face paint with marigold crown. holiday seasonal festive celebration day dead traditional dia de los muertos face",
       "tryPath": "try.html?id=day-of-the-dead--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/day-of-the-dead_before_a.webp",
+          "after": "docs/assets/filter-previews/day-of-the-dead_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/day-of-the-dead_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/day-of-the-dead_after_a.webp"
     },
     {
       "number": 11,
@@ -1520,7 +1576,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/easter-bunny_before_a.webp",
+          "after": "docs/assets/filter-previews/easter-bunny_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/easter-bunny_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/easter-bunny_after_a.webp"
     },
     {
       "number": 12,
@@ -1570,7 +1634,15 @@
       "shareText": "I just tried the Cupid Valentine filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "cupid valentine holiday & seasonal transform into cupid with wings, bow and arrow, pink theme. holiday seasonal festive celebration cupid valentine wings bow arrow pink theme",
       "tryPath": "try.html?id=cupid-valentine--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/cupid-valentine_before_a.webp",
+          "after": "docs/assets/filter-previews/cupid-valentine_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/cupid-valentine_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/cupid-valentine_after_a.webp"
     },
     {
       "number": 13,
@@ -1621,7 +1693,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/thanksgiving-pilgrim_before_a.webp",
+          "after": "docs/assets/filter-previews/thanksgiving-pilgrim_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/thanksgiving-pilgrim_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/thanksgiving-pilgrim_after_a.webp"
     },
     {
       "number": 14,
@@ -1673,7 +1753,15 @@
       "shareText": "I just tried the New Year Glam filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "new year glam holiday & seasonal add sparkly new year's eve outfit with confetti and champagne. holiday seasonal festive celebration new year glam sparkly eve outfit confetti champagne",
       "tryPath": "try.html?id=new-year-glam--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/new-year-glam_before_a.webp",
+          "after": "docs/assets/filter-previews/new-year-glam_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/new-year-glam_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/new-year-glam_after_a.webp"
     },
     {
       "number": 15,
@@ -1726,7 +1814,19 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/fourth-of-july_before_b.webp",
+          "after": "docs/assets/filter-previews/fourth-of-july_after_b.webp"
+        },
+        {
+          "before": "docs/assets/filter-previews/fourth-of-july_before_c.webp",
+          "after": "docs/assets/filter-previews/fourth-of-july_after_c.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/fourth-of-july_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/fourth-of-july_after_b.webp"
     },
     {
       "number": 16,
@@ -1777,7 +1877,15 @@
       "shareText": "I just tried the Chinese New Year Dragon filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "chinese new year dragon holiday & seasonal traditional chinese new year costume with dragon motifs. holiday seasonal festive celebration chinese new year dragon traditional costume motifs",
       "tryPath": "try.html?id=chinese-new-year-dragon--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/chinese-new-year-dragon_before_a.webp",
+          "after": "docs/assets/filter-previews/chinese-new-year-dragon_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/chinese-new-year-dragon_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/chinese-new-year-dragon_after_a.webp"
     },
     {
       "number": 17,
@@ -1826,7 +1934,15 @@
       "shareText": "I just tried the Holi Festival Colors filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "holi festival colors holiday & seasonal cover person in vibrant holi festival powder colors. holiday seasonal festive celebration holi festival colors cover vibrant powder",
       "tryPath": "try.html?id=holi-festival-colors--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/holi-festival-colors_before_a.webp",
+          "after": "docs/assets/filter-previews/holi-festival-colors_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/holi-festival-colors_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/holi-festival-colors_after_a.webp"
     },
     {
       "number": 18,
@@ -1879,7 +1995,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/st-patricks-leprechaun_before_a.webp",
+          "after": "docs/assets/filter-previews/st-patricks-leprechaun_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/st-patricks-leprechaun_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/st-patricks-leprechaun_after_a.webp"
     },
     {
       "number": 19,
@@ -1932,7 +2056,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/mardi-gras-mask_before_a.webp",
+          "after": "docs/assets/filter-previews/mardi-gras-mask_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/mardi-gras-mask_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/mardi-gras-mask_after_a.webp"
     },
     {
       "number": 20,
@@ -1987,7 +2119,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/spring-flower-crown_before_a.webp",
+          "after": "docs/assets/filter-previews/spring-flower-crown_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/spring-flower-crown_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/spring-flower-crown_after_a.webp"
     },
     {
       "number": 21,
@@ -2039,7 +2179,15 @@
       "shareText": "I just tried the Summer Beach Vibes filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "summer beach vibes holiday & seasonal transform into a beach scene with tropical shirt and sunset. holiday seasonal festive celebration summer beach vibes scene tropical shirt sunset",
       "tryPath": "try.html?id=summer-beach-vibes--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/summer-beach-vibes_before_a.webp",
+          "after": "docs/assets/filter-previews/summer-beach-vibes_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/summer-beach-vibes_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/summer-beach-vibes_after_a.webp"
     },
     {
       "number": 22,
@@ -2093,7 +2241,15 @@
       "categoryPath": "categories/holiday-seasonal.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/autumn-harvest_before_a.webp",
+          "after": "docs/assets/filter-previews/autumn-harvest_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/autumn-harvest_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/autumn-harvest_after_a.webp"
     },
     {
       "number": 23,
@@ -2144,7 +2300,15 @@
       "shareText": "I just tried the Winter Wonderland filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "winter wonderland holiday & seasonal transform into a magical winter scene with snow and ice. holiday seasonal festive celebration winter wonderland magical scene snow ice",
       "tryPath": "try.html?id=winter-wonderland--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/winter-wonderland_before_a.webp",
+          "after": "docs/assets/filter-previews/winter-wonderland_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/winter-wonderland_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/winter-wonderland_after_a.webp"
     },
     {
       "number": 24,
@@ -2193,7 +2357,15 @@
       "shareText": "I just tried the Carnival Costume filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "carnival costume holiday & seasonal elaborate carnival costume with feathers and sequins. holiday seasonal festive celebration carnival costume elaborate feathers sequins",
       "tryPath": "try.html?id=carnival-costume--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/carnival-costume_before_a.webp",
+          "after": "docs/assets/filter-previews/carnival-costume_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/carnival-costume_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/carnival-costume_after_a.webp"
     },
     {
       "number": 25,
@@ -2243,7 +2415,15 @@
       "shareText": "I just tried the Diwali Festival filter on GIC Photo Filters \ud83c\udf84",
       "searchText": "diwali festival holiday & seasonal add diwali festive attire with diyas and rangoli background. holiday seasonal festive celebration diwali festival attire diyas rangoli background",
       "tryPath": "try.html?id=diwali-festival--holiday_seasonal",
-      "categoryPath": "categories/holiday-seasonal.html"
+      "categoryPath": "categories/holiday-seasonal.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/diwali-festival_before_a.webp",
+          "after": "docs/assets/filter-previews/diwali-festival_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/diwali-festival_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/diwali-festival_after_a.webp"
     },
     {
       "number": 26,
@@ -2338,7 +2518,15 @@
       "shareText": "I just tried the Space Astronaut filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "space astronaut pop culture & characters person in a realistic nasa spacesuit with visor, space background. character costume fandom persona space astronaut realistic nasa spacesuit visor background",
       "tryPath": "try.html?id=space-astronaut--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/space-astronaut_before_b.webp",
+          "after": "docs/assets/filter-previews/space-astronaut_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/space-astronaut_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/space-astronaut_after_b.webp"
     },
     {
       "number": 28,
@@ -2484,7 +2672,15 @@
       "categoryPath": "categories/pop-culture.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/cowboy-cowgirl_before_a.webp",
+          "after": "docs/assets/filter-previews/cowboy-cowgirl_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/cowboy-cowgirl_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/cowboy-cowgirl_after_a.webp"
     },
     {
       "number": 31,
@@ -2531,7 +2727,15 @@
       "shareText": "I just tried the Ninja Warrior filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "ninja warrior pop culture & characters transform into a stealthy ninja with mask and dark outfit. character costume fandom persona ninja warrior stealthy mask dark outfit",
       "tryPath": "try.html?id=ninja-warrior--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/ninja-warrior_before_b.webp",
+          "after": "docs/assets/filter-previews/ninja-warrior_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/ninja-warrior_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/ninja-warrior_after_b.webp"
     },
     {
       "number": 32,
@@ -2671,7 +2875,15 @@
       "shareText": "I just tried the Roman Gladiator filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "roman gladiator pop culture & characters transform into a roman gladiator in the colosseum. character costume fandom persona roman gladiator colosseum",
       "tryPath": "try.html?id=roman-gladiator--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/roman-gladiator_before_a.webp",
+          "after": "docs/assets/filter-previews/roman-gladiator_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/roman-gladiator_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/roman-gladiator_after_a.webp"
     },
     {
       "number": 35,
@@ -2717,7 +2929,15 @@
       "shareText": "I just tried the Samurai filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "samurai pop culture & characters transform into a samurai warrior with traditional armor and katana. character costume fandom persona samurai warrior traditional armor katana",
       "tryPath": "try.html?id=samurai--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/samurai_before_b.webp",
+          "after": "docs/assets/filter-previews/samurai_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/samurai_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/samurai_after_b.webp"
     },
     {
       "number": 36,
@@ -2765,7 +2985,15 @@
       "shareText": "I just tried the Steampunk Explorer filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "steampunk explorer pop culture & characters steampunk style with brass goggles, gears, and victorian attire. character costume fandom persona steampunk explorer brass goggles gears victorian attire",
       "tryPath": "try.html?id=steampunk-explorer--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/steampunk-explorer_before_a.webp",
+          "after": "docs/assets/filter-previews/steampunk-explorer_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/steampunk-explorer_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/steampunk-explorer_after_a.webp"
     },
     {
       "number": 37,
@@ -2814,7 +3042,15 @@
       "shareText": "I just tried the Cyberpunk Runner filter free on GIC Photo Filters \ud83c\udfac",
       "searchText": "cyberpunk runner pop culture & characters cyberpunk aesthetic with neon lights, augmented reality implants. character costume fandom persona cyberpunk runner aesthetic neon lights augmented reality implants",
       "tryPath": "try.html?id=cyberpunk-runner--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/cyberpunk-runner_before_a.webp",
+          "after": "docs/assets/filter-previews/cyberpunk-runner_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/cyberpunk-runner_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/cyberpunk-runner_after_a.webp"
     },
     {
       "number": 38,
@@ -3061,7 +3297,15 @@
       "shareText": "I just tried the Disco Dancer filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "disco dancer pop culture & characters 1970s disco outfit with afro, sequins, dance floor. character costume fandom persona disco dancer 1970s outfit afro sequins dance floor",
       "tryPath": "try.html?id=disco-dancer--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/disco-dancer_before_a.webp",
+          "after": "docs/assets/filter-previews/disco-dancer_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/disco-dancer_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/disco-dancer_after_a.webp"
     },
     {
       "number": 43,
@@ -3162,7 +3406,15 @@
       "shareText": "I just tried the Secret Agent filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "secret agent pop culture & characters sleek black suit, dark sunglasses, spy gadgets. character costume fandom persona secret agent sleek black suit dark sunglasses spy",
       "tryPath": "try.html?id=secret-agent--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/secret-agent_before_b.webp",
+          "after": "docs/assets/filter-previews/secret-agent_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/secret-agent_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/secret-agent_after_b.webp"
     },
     {
       "number": 45,
@@ -3258,7 +3510,15 @@
       "shareText": "I just tried the Robot/Android filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "robot/android pop culture & characters half-human half-robot transformation with metallic features. character costume fandom persona robot android half human metallic features",
       "tryPath": "try.html?id=robot-android--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/robot-android_before_a.webp",
+          "after": "docs/assets/filter-previews/robot-android_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/robot-android_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/robot-android_after_a.webp"
     },
     {
       "number": 47,
@@ -3305,7 +3565,15 @@
       "shareText": "I just tried the Mermaid/Merman filter on GIC Photo Filters \ud83c\udfac",
       "searchText": "mermaid/merman pop culture & characters underwater transformation with scales and ocean backdrop. character costume fandom persona mermaid merman underwater scales ocean backdrop",
       "tryPath": "try.html?id=mermaid-merman--pop_culture",
-      "categoryPath": "categories/pop-culture.html"
+      "categoryPath": "categories/pop-culture.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/mermaid-merman_before_a.webp",
+          "after": "docs/assets/filter-previews/mermaid-merman_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/mermaid-merman_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/mermaid-merman_after_a.webp"
     },
     {
       "number": 48,
@@ -3454,7 +3722,15 @@
       "categoryPath": "categories/pop-culture.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/explorer-archaeologist_before_b.webp",
+          "after": "docs/assets/filter-previews/explorer-archaeologist_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/explorer-archaeologist_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/explorer-archaeologist_after_b.webp"
     },
     {
       "number": 51,
@@ -4526,7 +4802,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/ukiyo-e-japanese_before_b.webp",
+          "after": "docs/assets/filter-previews/ukiyo-e-japanese_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/ukiyo-e-japanese_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/ukiyo-e-japanese_after_b.webp"
     },
     {
       "number": 71,
@@ -4832,7 +5116,15 @@
       "shareText": "I just tried the Retro Yearbook '84 filter free on GIC Photo Filters \ud83d\udcf7",
       "searchText": "retro yearbook '84 retro & vintage 1984 school yearbook photo with soft focus and pastel backdrop. retro vintage nostalgia analog yearbook 84 1984 school soft focus pastel backdrop",
       "tryPath": "try.html?id=retro-yearbook-84--retro_vintage",
-      "categoryPath": "categories/retro-vintage.html"
+      "categoryPath": "categories/retro-vintage.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/retro-yearbook-84_before_a.webp",
+          "after": "docs/assets/filter-previews/retro-yearbook-84_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/retro-yearbook-84_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/retro-yearbook-84_after_a.webp"
     },
     {
       "number": 77,
@@ -5126,7 +5418,15 @@
       "categoryPath": "categories/retro-vintage.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/1960s-psychedelic_before_a.webp",
+          "after": "docs/assets/filter-previews/1960s-psychedelic_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/1960s-psychedelic_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/1960s-psychedelic_after_a.webp"
     },
     {
       "number": 83,
@@ -5224,7 +5524,15 @@
       "shareText": "I just tried the 1980s Neon filter on GIC Photo Filters \ud83d\udcf7",
       "searchText": "1980s neon retro & vintage 80s synthwave aesthetic with neon grid, palm trees, sunset. retro vintage nostalgia analog 1980s neon 80s synthwave aesthetic grid palm trees",
       "tryPath": "try.html?id=1980s-neon--retro_vintage",
-      "categoryPath": "categories/retro-vintage.html"
+      "categoryPath": "categories/retro-vintage.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/1980s-neon_before_a.webp",
+          "after": "docs/assets/filter-previews/1980s-neon_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/1980s-neon_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/1980s-neon_after_a.webp"
     },
     {
       "number": 85,
@@ -5276,7 +5584,15 @@
       "categoryPath": "categories/retro-vintage.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/daguerreotype_before_b.webp",
+          "after": "docs/assets/filter-previews/daguerreotype_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/daguerreotype_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/daguerreotype_after_b.webp"
     },
     {
       "number": 86,
@@ -5328,7 +5644,15 @@
       "categoryPath": "categories/retro-vintage.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/civil-war-tintype_before_a.webp",
+          "after": "docs/assets/filter-previews/civil-war-tintype_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/civil-war-tintype_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/civil-war-tintype_after_a.webp"
     },
     {
       "number": 87,
@@ -5375,7 +5699,15 @@
       "shareText": "I just tried the Victorian Portrait filter on GIC Photo Filters \ud83d\udcf7",
       "searchText": "victorian portrait retro & vintage formal victorian-era studio portrait with ornate frame. retro vintage nostalgia analog victorian formal era studio ornate frame",
       "tryPath": "try.html?id=victorian-portrait--retro_vintage",
-      "categoryPath": "categories/retro-vintage.html"
+      "categoryPath": "categories/retro-vintage.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/victorian-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/victorian-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/victorian-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/victorian-portrait_after_a.webp"
     },
     {
       "number": 88,
@@ -5424,7 +5756,15 @@
       "shareText": "I just tried the Roaring Twenties filter on GIC Photo Filters \ud83d\udcf7",
       "searchText": "roaring twenties retro & vintage 1920s speakeasy vibe with jazz-age fashion and atmosphere. retro vintage nostalgia analog roaring twenties 1920s speakeasy vibe jazz age fashion",
       "tryPath": "try.html?id=roaring-twenties--retro_vintage",
-      "categoryPath": "categories/retro-vintage.html"
+      "categoryPath": "categories/retro-vintage.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/roaring-twenties_before_a.webp",
+          "after": "docs/assets/filter-previews/roaring-twenties_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/roaring-twenties_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/roaring-twenties_after_a.webp"
     },
     {
       "number": 89,
@@ -5476,7 +5816,15 @@
       "categoryPath": "categories/retro-vintage.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/old-hollywood_before_a.webp",
+          "after": "docs/assets/filter-previews/old-hollywood_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/old-hollywood_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/old-hollywood_after_a.webp"
     },
     {
       "number": 90,
@@ -5526,7 +5874,15 @@
       "categoryPath": "categories/retro-vintage.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/wartime-1940s_before_a.webp",
+          "after": "docs/assets/filter-previews/wartime-1940s_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/wartime-1940s_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/wartime-1940s_after_a.webp"
     },
     {
       "number": 91,
@@ -5575,7 +5931,15 @@
       "shareText": "I just tried the Woodstock '69 filter on GIC Photo Filters \ud83d\udcf7",
       "searchText": "woodstock '69 retro & vintage 1969 woodstock festival hippie with tie-dye and flowers. retro vintage nostalgia analog woodstock 69 1969 festival hippie tie dye flowers",
       "tryPath": "try.html?id=woodstock-69--retro_vintage",
-      "categoryPath": "categories/retro-vintage.html"
+      "categoryPath": "categories/retro-vintage.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/woodstock-69_before_a.webp",
+          "after": "docs/assets/filter-previews/woodstock-69_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/woodstock-69_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/woodstock-69_after_a.webp"
     },
     {
       "number": 92,
@@ -5627,7 +5991,15 @@
       "categoryPath": "categories/retro-vintage.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/disco-fever-77_before_a.webp",
+          "after": "docs/assets/filter-previews/disco-fever-77_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/disco-fever-77_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/disco-fever-77_after_a.webp"
     },
     {
       "number": 93,
@@ -5676,7 +6048,15 @@
       "shareText": "I just tried the MTV Era '85 filter on GIC Photo Filters \ud83d\udcf7",
       "searchText": "mtv era '85 retro & vintage 1985 mtv music video style with bold makeup and fashion. retro vintage nostalgia analog mtv era 85 1985 music video bold makeup",
       "tryPath": "try.html?id=mtv-era-85--retro_vintage",
-      "categoryPath": "categories/retro-vintage.html"
+      "categoryPath": "categories/retro-vintage.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/mtv-era-85_before_a.webp",
+          "after": "docs/assets/filter-previews/mtv-era-85_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/mtv-era-85_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/mtv-era-85_after_a.webp"
     },
     {
       "number": 94,
@@ -5728,7 +6108,15 @@
       "categoryPath": "categories/retro-vintage.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/grunge-93_before_a.webp",
+          "after": "docs/assets/filter-previews/grunge-93_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/grunge-93_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/grunge-93_after_a.webp"
     },
     {
       "number": 95,
@@ -5777,7 +6165,15 @@
       "shareText": "I just tried the Y2K Aesthetic filter on GIC Photo Filters \ud83d\udcf7",
       "searchText": "y2k aesthetic retro & vintage year 2000 aesthetic with butterfly clips, low-rise jeans, frosted tips. retro vintage nostalgia analog y2k aesthetic year 2000 butterfly clips low rise",
       "tryPath": "try.html?id=y2k-aesthetic--retro_vintage",
-      "categoryPath": "categories/retro-vintage.html"
+      "categoryPath": "categories/retro-vintage.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/y2k-aesthetic_before_a.webp",
+          "after": "docs/assets/filter-previews/y2k-aesthetic_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/y2k-aesthetic_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/y2k-aesthetic_after_a.webp"
     },
     {
       "number": 96,
@@ -5825,7 +6221,15 @@
       "shareText": "I just tried the Wedding Day filter free on GIC Photo Filters \ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66",
       "searchText": "wedding day life events & milestones transform into elegant wedding attire with romantic backdrop. milestone celebration family announcement wedding day elegant attire romantic backdrop demo",
       "tryPath": "try.html?id=wedding-day--life_events",
-      "categoryPath": "categories/life-events.html"
+      "categoryPath": "categories/life-events.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/wedding-day_before_a.webp",
+          "after": "docs/assets/filter-previews/wedding-day_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/wedding-day_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/wedding-day_after_a.webp"
     },
     {
       "number": 97,
@@ -6031,7 +6435,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/birthday-celebration_before_a.webp",
+          "after": "docs/assets/filter-previews/birthday-celebration_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/birthday-celebration_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/birthday-celebration_after_a.webp"
     },
     {
       "number": 101,
@@ -6083,7 +6495,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/retirement-party_before_a.webp",
+          "after": "docs/assets/filter-previews/retirement-party_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/retirement-party_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/retirement-party_after_a.webp"
     },
     {
       "number": 102,
@@ -6138,7 +6558,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/first-day-of-school_before_a.webp",
+          "after": "docs/assets/filter-previews/first-day-of-school_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/first-day-of-school_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/first-day-of-school_after_a.webp"
     },
     {
       "number": 103,
@@ -6384,7 +6812,15 @@
       "shareText": "I just tried the Mother's Day filter on GIC Photo Filters \ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66",
       "searchText": "mother's day life events & milestones beautiful floral mother's day portrait with warm colors. milestone celebration family announcement mother day beautiful floral warm colors seasonal",
       "tryPath": "try.html?id=mothers-day--life_events",
-      "categoryPath": "categories/life-events.html"
+      "categoryPath": "categories/life-events.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/mothers-day_before_a.webp",
+          "after": "docs/assets/filter-previews/mothers-day_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/mothers-day_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/mothers-day_after_a.webp"
     },
     {
       "number": 108,
@@ -6437,7 +6873,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/fathers-day_before_a.webp",
+          "after": "docs/assets/filter-previews/fathers-day_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/fathers-day_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/fathers-day_after_a.webp"
     },
     {
       "number": 109,
@@ -6483,7 +6927,15 @@
       "shareText": "I just tried the Anniversary (25th Silver) filter on GIC Photo Filters \ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66",
       "searchText": "anniversary (25th silver) life events & milestones silver anniversary celebration with elegant silver tones. milestone celebration family announcement anniversary 25th silver elegant tones",
       "tryPath": "try.html?id=anniversary-25th-silver--life_events",
-      "categoryPath": "categories/life-events.html"
+      "categoryPath": "categories/life-events.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/anniversary-25th-silver_before_a.webp",
+          "after": "docs/assets/filter-previews/anniversary-25th-silver_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/anniversary-25th-silver_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/anniversary-25th-silver_after_a.webp"
     },
     {
       "number": 110,
@@ -6532,7 +6984,15 @@
       "shareText": "I just tried the Anniversary (50th Gold) filter on GIC Photo Filters \ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66",
       "searchText": "anniversary (50th gold) life events & milestones golden anniversary with gold tones and \"50 years\" motif. milestone celebration family announcement anniversary 50th gold golden tones 50 years motif",
       "tryPath": "try.html?id=anniversary-50th-gold--life_events",
-      "categoryPath": "categories/life-events.html"
+      "categoryPath": "categories/life-events.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/anniversary-50th-gold_before_a.webp",
+          "after": "docs/assets/filter-previews/anniversary-50th-gold_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/anniversary-50th-gold_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/anniversary-50th-gold_after_a.webp"
     },
     {
       "number": 111,
@@ -6583,7 +7043,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/gender-reveal_before_a.webp",
+          "after": "docs/assets/filter-previews/gender-reveal_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/gender-reveal_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/gender-reveal_after_a.webp"
     },
     {
       "number": 112,
@@ -6633,7 +7101,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/welcome-home_before_a.webp",
+          "after": "docs/assets/filter-previews/welcome-home_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/welcome-home_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/welcome-home_after_a.webp"
     },
     {
       "number": 113,
@@ -6685,7 +7161,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/new-job-celebration_before_a.webp",
+          "after": "docs/assets/filter-previews/new-job-celebration_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/new-job-celebration_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/new-job-celebration_after_a.webp"
     },
     {
       "number": 114,
@@ -6783,7 +7267,15 @@
       "categoryPath": "categories/life-events.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/family-reunion_before_a.webp",
+          "after": "docs/assets/filter-previews/family-reunion_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/family-reunion_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/family-reunion_after_a.webp"
     },
     {
       "number": 116,
@@ -7843,7 +8335,15 @@
       "categoryPath": "categories/professional.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/chef-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/chef-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/chef-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/chef-portrait_after_a.webp"
     },
     {
       "number": 137,
@@ -7889,7 +8389,15 @@
       "shareText": "I just tried the Artist Portrait filter on GIC Photo Filters \ud83d\udcbc",
       "searchText": "artist portrait professional & business creative artist portrait with paint splashes and studio. headshot profile business career artist creative paint splashes studio",
       "tryPath": "try.html?id=artist-portrait--professional",
-      "categoryPath": "categories/professional.html"
+      "categoryPath": "categories/professional.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/artist-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/artist-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/artist-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/artist-portrait_after_a.webp"
     },
     {
       "number": 138,
@@ -8035,7 +8543,15 @@
       "categoryPath": "categories/professional.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/doctor-nurse_before_b.webp",
+          "after": "docs/assets/filter-previews/doctor-nurse_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/doctor-nurse_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/doctor-nurse_after_b.webp"
     },
     {
       "number": 141,
@@ -8084,7 +8600,15 @@
       "categoryPath": "categories/professional.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/teacher-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/teacher-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/teacher-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/teacher-portrait_after_a.webp"
     },
     {
       "number": 142,
@@ -8135,7 +8659,15 @@
       "categoryPath": "categories/professional.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/real-estate-agent_before_a.webp",
+          "after": "docs/assets/filter-previews/real-estate-agent_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/real-estate-agent_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/real-estate-agent_after_a.webp"
     },
     {
       "number": 143,
@@ -8182,7 +8714,15 @@
       "shareText": "I just tried the Fitness Coach filter on GIC Photo Filters \ud83d\udcbc",
       "searchText": "fitness coach professional & business fitness coach portrait with gym/outdoor workout backdrop. headshot profile business career fitness coach gym outdoor workout backdrop",
       "tryPath": "try.html?id=fitness-coach--professional",
-      "categoryPath": "categories/professional.html"
+      "categoryPath": "categories/professional.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/fitness-coach_before_a.webp",
+          "after": "docs/assets/filter-previews/fitness-coach_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/fitness-coach_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/fitness-coach_after_a.webp"
     },
     {
       "number": 144,
@@ -8230,7 +8770,15 @@
       "shareText": "I just tried the Tech Founder filter on GIC Photo Filters \ud83d\udcbc",
       "searchText": "tech founder professional & business silicon valley tech founder with modern office backdrop. headshot profile business career tech founder silicon valley modern office backdrop",
       "tryPath": "try.html?id=tech-founder--professional",
-      "categoryPath": "categories/professional.html"
+      "categoryPath": "categories/professional.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/tech-founder_before_b.webp",
+          "after": "docs/assets/filter-previews/tech-founder_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/tech-founder_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/tech-founder_after_b.webp"
     },
     {
       "number": 145,
@@ -8280,7 +8828,15 @@
       "categoryPath": "categories/professional.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/podcast-host_before_b.webp",
+          "after": "docs/assets/filter-previews/podcast-host_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/podcast-host_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/podcast-host_after_b.webp"
     },
     {
       "number": 146,
@@ -8329,7 +8885,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/paris-eiffel-tower_before_a.webp",
+          "after": "docs/assets/filter-previews/paris-eiffel-tower_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/paris-eiffel-tower_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/paris-eiffel-tower_after_a.webp"
     },
     {
       "number": 147,
@@ -8375,7 +8939,15 @@
       "shareText": "I just tried the Tokyo Neon Streets filter on GIC Photo Filters \ud83c\udf0d",
       "searchText": "tokyo neon streets travel & places walking through neon-lit tokyo streets at night. travel destination vacation landmark tokyo neon streets lit night",
       "tryPath": "try.html?id=tokyo-neon-streets--travel_places",
-      "categoryPath": "categories/travel-places.html"
+      "categoryPath": "categories/travel-places.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/tokyo-neon-streets_before_a.webp",
+          "after": "docs/assets/filter-previews/tokyo-neon-streets_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/tokyo-neon-streets_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/tokyo-neon-streets_after_a.webp"
     },
     {
       "number": 148,
@@ -8425,7 +8997,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/new-york-times-square_before_a.webp",
+          "after": "docs/assets/filter-previews/new-york-times-square_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/new-york-times-square_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/new-york-times-square_after_a.webp"
     },
     {
       "number": 149,
@@ -8479,7 +9059,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/tropical-beach_before_a.webp",
+          "after": "docs/assets/filter-previews/tropical-beach_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/tropical-beach_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/tropical-beach_after_a.webp"
     },
     {
       "number": 150,
@@ -8537,7 +9125,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/northern-lights_before_a.webp",
+          "after": "docs/assets/filter-previews/northern-lights_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/northern-lights_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/northern-lights_after_a.webp"
     },
     {
       "number": 151,
@@ -8584,7 +9180,15 @@
       "shareText": "I just tried the Safari Adventure filter on GIC Photo Filters \ud83c\udf0d",
       "searchText": "safari adventure travel & places on an african safari with elephants and sunset savanna. travel destination vacation landmark safari adventure african elephants sunset savanna",
       "tryPath": "try.html?id=safari-adventure--travel_places",
-      "categoryPath": "categories/travel-places.html"
+      "categoryPath": "categories/travel-places.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/safari-adventure_before_a.webp",
+          "after": "docs/assets/filter-previews/safari-adventure_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/safari-adventure_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/safari-adventure_after_a.webp"
     },
     {
       "number": 152,
@@ -8633,7 +9237,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/mountain-summit_before_a.webp",
+          "after": "docs/assets/filter-previews/mountain-summit_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/mountain-summit_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/mountain-summit_after_a.webp"
     },
     {
       "number": 153,
@@ -8682,7 +9294,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/ancient-ruins_before_a.webp",
+          "after": "docs/assets/filter-previews/ancient-ruins_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/ancient-ruins_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/ancient-ruins_after_a.webp"
     },
     {
       "number": 154,
@@ -8731,7 +9351,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "img2img",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/venice-gondola_before_a.webp",
+          "after": "docs/assets/filter-previews/venice-gondola_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/venice-gondola_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/venice-gondola_after_a.webp"
     },
     {
       "number": 155,
@@ -8779,7 +9407,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/great-wall-of-china_before_a.webp",
+          "after": "docs/assets/filter-previews/great-wall-of-china_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/great-wall-of-china_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/great-wall-of-china_after_a.webp"
     },
     {
       "number": 156,
@@ -8827,7 +9463,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/machu-picchu_before_a.webp",
+          "after": "docs/assets/filter-previews/machu-picchu_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/machu-picchu_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/machu-picchu_after_a.webp"
     },
     {
       "number": 157,
@@ -8877,7 +9521,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/santorini-greece_before_a.webp",
+          "after": "docs/assets/filter-previews/santorini-greece_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/santorini-greece_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/santorini-greece_after_a.webp"
     },
     {
       "number": 158,
@@ -8932,7 +9584,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/cherry-blossom-japan_before_a.webp",
+          "after": "docs/assets/filter-previews/cherry-blossom-japan_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/cherry-blossom-japan_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/cherry-blossom-japan_after_a.webp"
     },
     {
       "number": 159,
@@ -8981,7 +9641,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/pyramids-of-giza_before_a.webp",
+          "after": "docs/assets/filter-previews/pyramids-of-giza_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/pyramids-of-giza_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/pyramids-of-giza_after_a.webp"
     },
     {
       "number": 160,
@@ -9029,7 +9697,15 @@
       "categoryPath": "categories/travel-places.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/amazon-rainforest_before_a.webp",
+          "after": "docs/assets/filter-previews/amazon-rainforest_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/amazon-rainforest_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/amazon-rainforest_after_a.webp"
     },
     {
       "number": 161,
@@ -9988,7 +10664,15 @@
       "shareText": "I just tried the Age Progression filter on GIC Photo Filters \ud83d\udee0\ufe0f",
       "searchText": "age progression utility & serious tools show how person might look 20-30 years older. utility edit enhance photo tool age progression how might 20 30 years older",
       "tryPath": "try.html?id=age-progression--utility_tools",
-      "categoryPath": "categories/utility-tools.html"
+      "categoryPath": "categories/utility-tools.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/age-progression_before_a.webp",
+          "after": "docs/assets/filter-previews/age-progression_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/age-progression_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/age-progression_after_a.webp"
     },
     {
       "number": 181,
@@ -10092,7 +10776,15 @@
       "shareText": "I just tried the Action Figure filter on GIC Photo Filters \ud83c\udf89",
       "searchText": "action figure fun & meme transform into an action figure in a toy box. fun meme novelty shareable action figure toy box",
       "tryPath": "try.html?id=action-figure--fun_meme",
-      "categoryPath": "categories/fun-meme.html"
+      "categoryPath": "categories/fun-meme.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/action-figure_before_b.webp",
+          "after": "docs/assets/filter-previews/action-figure_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/action-figure_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/action-figure_after_b.webp"
     },
     {
       "number": 183,
@@ -10197,7 +10889,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/wanted-poster_before_a.webp",
+          "after": "docs/assets/filter-previews/wanted-poster_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/wanted-poster_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/wanted-poster_after_a.webp"
     },
     {
       "number": 185,
@@ -10246,7 +10946,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/trading-card_before_a.webp",
+          "after": "docs/assets/filter-previews/trading-card_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/trading-card_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/trading-card_after_a.webp"
     },
     {
       "number": 186,
@@ -10350,7 +11058,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/stamp-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/stamp-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/stamp-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/stamp-portrait_after_a.webp"
     },
     {
       "number": 188,
@@ -10397,7 +11113,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/lego-minifigure_before_b.webp",
+          "after": "docs/assets/filter-previews/lego-minifigure_after_b.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/lego-minifigure_before_b.webp",
+      "previewAfter": "docs/assets/filter-previews/lego-minifigure_after_b.webp"
     },
     {
       "number": 189,
@@ -10613,7 +11337,15 @@
       "shareText": "I just tried the Underwater Portrait filter on GIC Photo Filters \ud83c\udf89",
       "searchText": "underwater portrait fun & meme floating underwater with bubbles and marine life. fun meme novelty shareable underwater floating bubbles marine life seasonal",
       "tryPath": "try.html?id=underwater-portrait--fun_meme",
-      "categoryPath": "categories/fun-meme.html"
+      "categoryPath": "categories/fun-meme.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/underwater-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/underwater-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/underwater-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/underwater-portrait_after_a.webp"
     },
     {
       "number": 193,
