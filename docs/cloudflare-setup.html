@@ -31,7 +31,7 @@
         <section class="static-hero">
           <span class="page-eyebrow">BYOK</span>
           <h1>Use your Cloudflare key on gicPhotoFilters</h1>
-          <p class="lead">gicPhotoFilters now lets you plug in your Cloudflare account ID and Workers AI token so transforms run directly from your browser. These credentials stay in sessionStorage and never hit GIC's backend.</p>
+          <p class="lead">gicPhotoFilters now lets you plug in your Cloudflare account ID and Workers AI token so the site can securely proxy transforms on your behalf. These credentials stay in your browser storage choice and are forwarded only as HTTPS request headers to <code>/api/health</code> and <code>/api/transform</code>.</p>
         </section>
 
         <section class="section static-grid">
@@ -45,7 +45,7 @@
           </article>
           <article class="detail-card">
             <h3>3. Create a Workers AI token</h3>
-            <p>Under “My Profile → API Tokens”, create a scoped token with <strong>Workers AI: Run</strong> permission. Paste it into the BYOK panel. The token stays in your browser tab only.</p>
+              <p>Under “My Profile → API Tokens”, create a scoped token with <strong>Workers AI: Run</strong> permission. Paste it into the Settings modal. You can store it in this browser or keep it session-only.</p>
           </article>
         </section>
 
@@ -55,13 +55,13 @@
               <span class="page-eyebrow">Live mode</span>
               <h2>What happens after you enter credentials</h2>
             </div>
-            <p>Once the BYOK panel is configured, the Try page calls Cloudflare's REST API directly for every supported filter. No data goes through GIC's backend, so your billing and neuron usage stay with Cloudflare.</p>
+            <p>Once Settings is configured, the website always posts to <code>/api/transform</code>. That endpoint securely forwards your Cloudflare credentials in request headers, so your billing and neuron usage still stay with Cloudflare without exposing the token in URLs.</p>
           </div>
           <div class="markdown-content">
             <ul>
-              <li>The browser POSTs to <code>https://api.cloudflare.com/client/v4/accounts/{Account ID}/ai/run/{modelId}</code> using your token.</li>
-              <li>A single transform returns an image blob that the page renders instantly and can download or share.</li>
-              <li>Credentials are stored in <code>sessionStorage</code> only, cleared when the tab closes. GIC never receives or logs them.</li>
+                <li>The browser POSTs to <code>/api/transform</code>; the worker attaches <code>X-CF-Account-ID</code> and <code>X-CF-API-Token</code> to the upstream Cloudflare call.</li>
+                <li>A single transform returns an image blob or stored result URL that the page renders instantly and can download or share.</li>
+                <li>Credentials are stored in your chosen browser storage and are never written to server-side logs or databases.</li>
             </ul>
           </div>
         </section>
@@ -72,13 +72,13 @@
               <span class="page-eyebrow">Session view</span>
               <h2>Quick tips for the BYOK workflow</h2>
             </div>
-            <p>Use the “Use your own Cloudflare API key” panel on the Try page. Toggle between demo and live mode, paste your Account ID + token, and watch the live status badges update.</p>
+            <p>Use the Settings gear from the header or the Try/Build page status banners. The setup wizard opens as a modal so your photo, builder prompt, and page scroll position all stay intact underneath.</p>
           </div>
           <div class="markdown-content">
             <ul>
-              <li>The live mode toggle keeps demo-only preview examples available until you enter both credentials.</li>
-              <li>Live transforms increment a session neuron counter shown beside the panel so you can track how much you are spending.</li>
-              <li>When live mode is active the “Share result” button shares the actual output image; “Share filter” still copies the Try page link.</li>
+                <li>The Try page keeps demo examples available until you enter both credentials and test the connection.</li>
+                <li>BYOK runs increment a browser-side session neuron counter so you can track how much you are spending.</li>
+                <li>The Build page can open the setup wizard or settings modal without clearing your prompt, uploaded photo, or test results.</li>
             </ul>
           </div>
         </section>

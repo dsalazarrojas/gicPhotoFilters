@@ -1,3 +1,23 @@
+import {
+  BYOK_EVENTS,
+  BYOK_STORAGE_MODES,
+  addSessionNeurons,
+  buildCloudflareProxyHeaders,
+  clearByokSettings,
+  getSessionNeurons,
+  loadByokSettings,
+  resetSessionNeurons,
+  saveByokSettings,
+} from './byok.mjs'
+import {
+  MODEL_OPTIONS,
+  cacheByokHealth,
+  clearCachedByokHealth,
+  initSettingsSurface,
+  loadCachedByokHealth,
+  loadPreferredModel,
+} from './settings-surface.mjs'
+
 const SITE = {
   name: 'GIC Photo Filters',
   baseUrl: 'https://photofilters.gic.mx',
@@ -58,6 +78,7 @@ const FALLBACK_CATALOG = {
   filtersReady: 6,
   models: {
     'flux2-klein-9b': { id: '@cf/black-forest-labs/flux-2-klein-9b', name: 'FLUX.2 Klein 9B', neuronsPerRun: 150 },
+    'flux2-klein-4b': { id: '@cf/black-forest-labs/flux-2-klein-4b', name: 'FLUX.2 Klein 4B', neuronsPerRun: 80 },
     'sd15-img2img': { id: '@cf/stabilityai/stable-diffusion-v1-5-img2img', name: 'Stable Diffusion v1.5 Img2Img', neuronsPerRun: 100 },
     'sd15-inpainting': { id: '@cf/stabilityai/stable-diffusion-v1-5-inpainting', name: 'Stable Diffusion v1.5 Inpainting', neuronsPerRun: 120 },
     'client-side': { id: 'client-side', name: 'Browser (no AI)', neuronsPerRun: 0 },
@@ -170,18 +191,6 @@ const FALLBACK_CATALOG = {
   ],
 };
 
-const BYOK_SESSION_KEYS = Object.freeze({
-  ACCOUNT_ID: 'gicpf.byok.accountId',
-  API_TOKEN: 'gicpf.byok.apiToken',
-  MODE: 'gicpf.byok.mode',
-  USAGE: 'gicpf.byok.neuronsUsed',
-});
-
-const BYOK_MODES = Object.freeze({
-  DEMO: 'demo',
-  LIVE: 'live',
-});
-
 const hasDom = typeof window !== 'undefined' && typeof document !== 'undefined';
 const previewCache = new Map();
 const toastTimers = new Set();
@@ -190,61 +199,33 @@ let runtimeConfigPromise;
 let analyticsPromise;
 let healthSnapshotPromise;
 
-function readSessionStorageValue(key) {
-  if (!hasDom) return '';
-  try {
-    return sessionStorage.getItem(key) || '';
-  } catch (error) {
-    console.warn('Unable to access sessionStorage', error);
-    return '';
-  }
+function syncHeaderSettingsState(root = document) {
+  if (!hasDom || !root) return;
+  const byok = loadByokSettings();
+  root.querySelectorAll('[data-settings-trigger]').forEach((button) => {
+    button.dataset.configured = String(byok.hasCredentials);
+    button.setAttribute(
+      'aria-label',
+      byok.hasCredentials
+        ? `Cloudflare settings connected for account ${byok.maskedAccountId || 'configured'}`
+        : 'Open Cloudflare settings',
+    );
+    const label = button.querySelector('[data-settings-label]');
+    if (label) label.textContent = 'Settings';
+  });
 }
 
-function writeSessionStorageValue(key, value) {
+function openSettingsSurface(source = 'site-header') {
   if (!hasDom) return;
-  try {
-    sessionStorage.setItem(key, value);
-  } catch (error) {
-    console.warn('Unable to save to sessionStorage', error);
-  }
+  window.dispatchEvent(new CustomEvent('gic:open-settings', { detail: { source } }));
 }
 
-function removeSessionStorageValue(key) {
-  if (!hasDom) return;
-  try {
-    sessionStorage.removeItem(key);
-  } catch (error) {
-    console.warn('Unable to remove sessionStorage key', error);
-  }
+if (hasDom) {
+  window.addEventListener(BYOK_EVENTS.CHANGED, () => syncHeaderSettingsState());
 }
 
-function loadByokSession() {
-  const accountId = readSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID);
-  const apiToken = readSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN);
-  const storedMode = readSessionStorageValue(BYOK_SESSION_KEYS.MODE);
-  const hasCreds = Boolean(accountId && apiToken);
-  const mode = hasCreds && storedMode === BYOK_MODES.LIVE ? BYOK_MODES.LIVE : BYOK_MODES.DEMO;
-  return {
-    accountId,
-    apiToken,
-    mode,
-  };
-}
-
-function getSessionNeurons() {
-  const value = readSessionStorageValue(BYOK_SESSION_KEYS.USAGE);
-  return Number.isFinite(Number(value)) ? Number(value) : 0;
-}
-
-function resetSessionNeurons() {
-  removeSessionStorageValue(BYOK_SESSION_KEYS.USAGE);
-}
-
-function addSessionNeurons(amount) {
-  const current = getSessionNeurons();
-  const next = current + Math.max(0, Number(amount) || 0);
-  writeSessionStorageValue(BYOK_SESSION_KEYS.USAGE, String(next));
-  return next;
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function slugify(value = '') {
@@ -268,8 +249,97 @@ function capitalize(value = '') {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function encodeBase64Json(value) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  let binary = '';
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
+
+function decodeBase64Json(value = '') {
+  const binary = atob(String(value || '').trim());
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
 function formatNumber(value) {
   return new Intl.NumberFormat('en-US').format(value);
+}
+
+function normalizeCustomFilterDefinition(rawDefinition = {}) {
+  if (!rawDefinition || typeof rawDefinition !== 'object') return null;
+  const prompt = String(rawDefinition.prompt || '').trim();
+  if (!prompt) return null;
+  const supportedModels = MODEL_OPTIONS.map((option) => option.id).filter((id) => id !== 'default');
+  const category = getCategory(rawDefinition.category || rawDefinition.categorySlug || 'artistic_styles');
+  const width = [512, 768, 1024].includes(Number(rawDefinition.width)) ? Number(rawDefinition.width) : 768;
+  const height = [512, 768, 1024].includes(Number(rawDefinition.height)) ? Number(rawDefinition.height) : 768;
+  const normalizedTags = Array.isArray(rawDefinition.tags)
+    ? rawDefinition.tags
+    : String(rawDefinition.tags || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+  return {
+    name: String(rawDefinition.name || 'Custom Filter').trim().slice(0, 60) || 'Custom Filter',
+    description: String(rawDefinition.description || '').trim().slice(0, 160),
+    category: category.id,
+    prompt: prompt.slice(0, 500),
+    negativePrompt: String(rawDefinition.negativePrompt || '').trim().slice(0, 300),
+    model: supportedModels.includes(rawDefinition.model) ? rawDefinition.model : 'flux2-klein-9b',
+    strength: clamp(Number(rawDefinition.strength) || 0.65, 0.3, 1),
+    guidance: clamp(Number(rawDefinition.guidance) || 7.5, 3, 15),
+    width,
+    height,
+    variantCount: [1, 2].includes(Number(rawDefinition.variantCount)) ? Number(rawDefinition.variantCount) : 1,
+    tags: normalizedTags.slice(0, 8),
+  };
+}
+
+function createCustomFilterEntry(rawDefinition, catalog) {
+  const definition = normalizeCustomFilterDefinition(rawDefinition);
+  if (!definition) return null;
+  const categories = (catalog?.categories?.length ? catalog.categories : CATEGORY_META).map((category) => normalizeCategory(category));
+  const categoryMap = Object.fromEntries(categories.map((category) => [category.id, category]));
+  const customSlug = `custom-${slugify(definition.name)}`;
+  const category = categoryMap[definition.category] || getCategory(definition.category);
+  return withDefaults({
+    id: `custom_${slugify(definition.name)}--${category.id}`,
+    slug: customSlug,
+    name: definition.name,
+    category: category.id,
+    description: definition.description || `Custom ${category.name.toLowerCase()} prompt built with the website builder.`,
+    prompt: definition.prompt,
+    negativePrompt: definition.negativePrompt,
+    model: definition.model,
+    strength: definition.strength,
+    guidance: definition.guidance,
+    outputWidth: definition.width,
+    outputHeight: definition.height,
+    variantCount: definition.variantCount,
+    requiresAI: true,
+    clientSideOnly: false,
+    isDemoFilter: false,
+    type: definition.model === 'sd15-inpainting' ? 'inpainting' : 'img2img',
+    tags: definition.tags,
+    shareText: `Try my custom filter “${definition.name}”:`,
+    helpMarkdown: `## Shared custom filter\n- Prompt: ${definition.prompt}\n- Model: ${definition.model}\n- Add your Cloudflare key in Settings if this deployment blocks custom demo runs.`,
+    customDefinition: definition,
+    isCustomFilter: true,
+  }, 0, catalog?.models || FALLBACK_CATALOG.models, categoryMap);
+}
+
+function buildTryHref(filter) {
+  if (filter?.customDefinition) {
+    return `/try.html?custom=${encodeURIComponent(encodeBase64Json(filter.customDefinition))}`;
+  }
+  return `/try.html?id=${encodeURIComponent(filter?.id || '')}`;
+}
+
+function buildTryShareUrl(filter) {
+  const baseUrl = hasDom ? window.location.origin : SITE.baseUrl;
+  return `${baseUrl}${buildTryHref(filter)}`;
 }
 
 function normalizeSiteConfig(rawConfig = {}) {
@@ -472,13 +542,25 @@ async function loadCatalog() {
 async function loadHealthSnapshot() {
   if (!hasDom) return null;
   if (healthSnapshotPromise) return healthSnapshotPromise;
-  healthSnapshotPromise = fetch('/api/health', { cache: 'no-store' })
+  healthSnapshotPromise = fetch('/api/health?view=site', { cache: 'no-store' })
     .then(async (response) => {
       const payload = await response.json().catch(() => null);
       return payload?.data || null;
     })
     .catch(() => null);
   return healthSnapshotPromise;
+}
+
+async function loadDemoUsage(filterId = '') {
+  if (!hasDom) return null;
+  const query = filterId ? `?filterId=${encodeURIComponent(filterId)}` : '';
+  try {
+    const response = await fetch(`/api/usage${query}`, { cache: 'no-store' });
+    const payload = await response.json().catch(() => null);
+    return payload?.data || null;
+  } catch {
+    return null;
+  }
 }
 
 function generatePreviewData(filter, phase = 'before') {
@@ -527,8 +609,8 @@ function generatePreviewData(filter, phase = 'before') {
 }
 
 function renderFilterCard(filter, options = {}) {
-  const detailsHref = `/try.html?id=${encodeURIComponent(filter.id)}#details`;
-  const tryHref = `/try.html?id=${encodeURIComponent(filter.id)}`;
+  const tryHref = buildTryHref(filter);
+  const detailsHref = `${tryHref}#details`;
   const compact = options.compact ? ' compact' : '';
   return `
     <article class="filter-card${compact}">
@@ -657,6 +739,7 @@ function renderHealthNotice(target, health) {
 
 function renderHeader(page) {
   const pageToHref = {
+    build: '/build.html',
     browse: '/browse.html',
     try: '/try.html',
     'category-index': '/categories/index.html',
@@ -666,6 +749,7 @@ function renderHeader(page) {
   const navItems = [
     ['Browse', '/browse.html'],
     ['Try', '/try.html'],
+    ['Build', '/build.html'],
     ['Categories', '/categories/index.html'],
     ['Get App', SITE.appLink],
   ];
@@ -682,6 +766,11 @@ function renderHeader(page) {
         ${navItems.map(([label, href]) => `<a href="${href}" ${href === currentHref ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
       </nav>
       <div class="header-actions">
+        <button class="button-ghost settings-trigger" type="button" data-settings-trigger data-configured="false" aria-label="Open Cloudflare settings">
+          <span class="settings-trigger__icon" aria-hidden="true">⚙</span>
+          <span class="settings-trigger__dot" aria-hidden="true"></span>
+          <span data-settings-label>Settings</span>
+        </button>
         <div class="theme-menu">
           <button class="button-ghost" type="button" id="theme-menu-button" aria-haspopup="true" aria-expanded="false">Theme</button>
           <div class="theme-menu__panel" id="theme-menu-panel" hidden>
@@ -711,6 +800,7 @@ function renderFooter() {
           <strong>Explore</strong>
           <a href="/browse.html">Browse filters</a>
           <a href="/try.html">Try a filter</a>
+          <a href="/build.html">Build a filter</a>
           <a href="/categories/index.html">Categories</a>
           <a href="/about.html#app-availability">Get the app</a>
         </div>
@@ -790,6 +880,11 @@ function injectShell(page) {
   const footer = document.querySelector('[data-site-footer]');
   if (header) header.innerHTML = renderHeader(page);
   if (footer) footer.innerHTML = renderFooter();
+  initSettingsSurface();
+  document.querySelectorAll('[data-settings-trigger]').forEach((button) => {
+    button.addEventListener('click', () => openSettingsSurface('site-header'));
+  });
+  syncHeaderSettingsState();
   initThemeControls();
 }
 
@@ -886,15 +981,19 @@ function incrementUsage(filter) {
   return usage;
 }
 
-function renderUsageGrid(target, catalog, filter = null) {
+function renderUsageGrid(target, catalog, filter = null, usageSnapshot = null) {
   if (!target) return;
-  const usage = getUsageSnapshot();
-  const remainingFree = Math.max(0, 10 - usage.transformsUsed);
-  const remainingNeurons = Math.max(0, catalog.dailyFreeNeurons - usage.neuronsUsed);
+  const usage = usageSnapshot || getUsageSnapshot();
+  const used = Number(usage.used ?? usage.transformsUsed ?? 0);
+  const limit = Number(usage.limit ?? 10);
+  const remainingFree = Number.isFinite(Number(usage.remaining)) ? Number(usage.remaining) : Math.max(0, limit - used);
+  const neuronsUsed = Number(usage.neuronsUsed ?? 0);
+  const neuronsLimit = Number(usage.neuronsLimit ?? catalog.dailyFreeNeurons);
+  const remainingNeurons = Math.max(0, neuronsLimit - neuronsUsed);
   const currentCost = filter ? `${filter.estimatedNeurons} neurons / run` : 'Pick a filter to see per-run cost';
   target.innerHTML = `
-    ${renderKpi('Free demo runs today', `${usage.transformsUsed}/10`, `${remainingFree} demo runs remaining`)}
-    ${renderKpi('Neuron budget', `${formatNumber(usage.neuronsUsed)}/${formatNumber(catalog.dailyFreeNeurons)}`, `${formatNumber(remainingNeurons)} neurons left`)}
+    ${renderKpi('Free demo runs today', `${used}/${limit}`, `${remainingFree} demo runs remaining`)}
+    ${renderKpi('Neuron budget', `${formatNumber(neuronsUsed)}/${formatNumber(neuronsLimit)}`, `${formatNumber(remainingNeurons)} neurons left`)}
     ${renderKpi('Current filter', filter ? escapeHtml(filter.name) : 'Choose a filter', currentCost)}
     ${renderKpi('Unlimited option', 'Companion app', 'Bring your own API key later for full access')}`;
 }
@@ -1159,17 +1258,28 @@ function normalizeTransformResponse(payload) {
   return candidates;
 }
 
-async function attemptApiTransform(filter, blob, intensity = 0.65) {
+async function attemptApiTransform(filter, blob, intensity = 0.65, byok = {}, options = {}) {
+  const { customFilter = filter?.customDefinition || null, signal = undefined } = options;
   const payload = new FormData();
   payload.append('image', blob, 'upload.jpg');
-  payload.append('filterId', filter.id);
+  if (customFilter) payload.append('customFilter', JSON.stringify(customFilter));
+  else payload.append('filterId', filter.id);
   payload.append('intensity', String(intensity));
-  const response = await fetch('/api/transform', { method: 'POST', body: payload });
+  const response = await fetch('/api/transform', {
+    method: 'POST',
+    body: payload,
+    headers: buildCloudflareProxyHeaders(byok),
+    signal,
+  });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new Error(payload?.error?.message || `Transform failed with ${response.status}`);
+    const error = new Error(payload?.error?.message || `Transform failed with ${response.status}`);
+    error.code = payload?.error?.code || '';
+    error.status = response.status;
+    throw error;
   }
   const storageMode = response.headers.get('x-storage-mode') || 'r2';
+  const requestMode = response.headers.get('x-proxy-mode') || (byok?.hasCredentials ? 'cloudflare' : 'demo');
   const contentType = response.headers.get('content-type') || '';
   if (contentType.startsWith('image/')) {
     const blobResult = await response.blob();
@@ -1177,6 +1287,7 @@ async function attemptApiTransform(filter, blob, intensity = 0.65) {
       images: [URL.createObjectURL(blobResult)],
       mode: 'api',
       storageMode,
+      requestMode,
       blob: blobResult,
     };
   }
@@ -1187,74 +1298,23 @@ async function attemptApiTransform(filter, blob, intensity = 0.65) {
     images,
     mode: 'api',
     storageMode: data?.data?.storage?.mode || data?.storage?.mode || storageMode,
+    requestMode: data?.data?.proxyMode || data?.proxyMode || requestMode,
   };
 }
 
-async function attemptLiveTransform(filter, blob, intensity = 0.65, catalog = {}, byok = {}) {
-  const accountId = (byok?.accountId || '').trim();
-  const apiToken = byok?.apiToken || '';
-  if (!accountId || !apiToken) {
-    throw new Error('Enter your Cloudflare account ID and API token for live transforms.');
-  }
-  if (filter.type === 'inpainting') {
-    throw new Error('Live browser mode does not support inpainting filters yet. Use demo mode or the companion app.');
-  }
-  const modelDefinition = catalog?.models?.[filter.model];
-  const modelId = (modelDefinition?.id || filter.model || '').trim();
-  if (!modelId) {
-    throw new Error('Unable to resolve the model ID for this filter.');
-  }
-  const imageBuffer = await blob.arrayBuffer();
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${encodeURIComponent(modelId)}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: filter.prompt,
-        negative_prompt: filter.negativePrompt || undefined,
-        image: Array.from(new Uint8Array(imageBuffer)),
-        strength: Number(filter.strength ?? 0.65),
-        guidance: Number(filter.guidance ?? 7.5),
-        width: Number(filter.outputWidth ?? 1024),
-        height: Number(filter.outputHeight ?? 1024),
-      }),
-    },
-  );
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    const message =
-      payload?.errors?.[0]?.message || payload?.message || `Live transform failed with ${response.status}`;
-    throw new Error(message);
-  }
-
-  const contentType = response.headers.get('content-type') || '';
-  let blobResult;
-  if (contentType.startsWith('image/')) {
-    blobResult = await response.blob();
-  } else {
-    const payload = await response.json().catch(() => null);
-    const base64Image = payload?.result?.image || payload?.image;
-    if (!base64Image || typeof base64Image !== 'string') {
-      throw new Error('Cloudflare did not return an image payload.');
-    }
-    const binary = atob(base64Image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    blobResult = new Blob([bytes], { type: payload?.result?.content_type || 'image/png' });
-  }
-
-  return {
-    images: [URL.createObjectURL(blobResult)],
-    mode: 'live',
-    storageMode: 'direct',
-    blob: blobResult,
-  };
+function shouldFallbackToPreview(error) {
+  if (error?.name === 'AbortError') return false;
+  return ![
+    'cloudflare_invalid_api_token',
+    'cloudflare_workers_ai_permission_required',
+    'cloudflare_account_not_found',
+    'cloudflare_credentials_incomplete',
+    'cloudflare_credentials_missing',
+    'cloudflare_account_id_invalid',
+    'custom_filter_requires_byok',
+    'custom_model_invalid',
+    'mask_required',
+  ].includes(error?.code || '')
 }
 
 function updateProgress(progressElement, percentage) {
@@ -1270,8 +1330,9 @@ async function runTransform({
   intensity,
   statusElement,
   progressElement,
-  catalog,
   byok,
+  customFilter = filter?.customDefinition || null,
+  signal,
 }) {
   const messages = filter.clientSideOnly
     ? ['Applying the browser effect…', 'Dialing in color and contrast…', 'Rendering the instant preview…']
@@ -1291,44 +1352,35 @@ async function runTransform({
     let mode = 'preview';
     let storageMode = 'preview';
     let warningMessage = '';
-    const liveByok = Boolean(!filter.clientSideOnly && byok?.mode === BYOK_MODES.LIVE);
+    let requestMode = 'preview';
     if (!filter.clientSideOnly) {
-      if (liveByok) {
-        try {
-          const liveResult = await attemptLiveTransform(filter, sourceBlob, intensity, catalog, byok);
-          images = liveResult.images;
-          mode = liveResult.mode;
-          storageMode = liveResult.storageMode || 'direct';
-          warningMessage = '';
-        } catch (error) {
-          warningMessage = `Live transform failed: ${error.message}. Showing preview instead.`;
-          console.error(error);
-          images = await generatePreviewVariants(source, filter, intensity);
-          mode = 'preview';
-          storageMode = 'preview';
+      try {
+        const apiOptions = { customFilter, signal };
+        const apiResult = await attemptApiTransform(filter, sourceBlob, intensity, byok, apiOptions);
+        images = apiResult.images;
+        mode = apiResult.mode;
+        storageMode = apiResult.storageMode || 'r2';
+        requestMode = apiResult.requestMode || (byok?.hasCredentials ? 'cloudflare' : 'demo');
+        warningMessage = '';
+      } catch (error) {
+        if (!shouldFallbackToPreview(error)) {
+          throw error;
         }
-      } else {
-        try {
-          const apiResult = await attemptApiTransform(filter, sourceBlob, intensity);
-          images = apiResult.images;
-          mode = apiResult.mode;
-          storageMode = apiResult.storageMode || 'r2';
-          warningMessage = '';
-        } catch (error) {
-          warningMessage = `Transform failed: ${error.message}. Preview ready instead.`;
-          console.error(error);
-          images = await generatePreviewVariants(source, filter, intensity);
-          mode = 'preview';
-          storageMode = 'preview';
-        }
+        warningMessage = `Transform failed: ${error.message}. Preview ready instead.`;
+        console.error(error);
+        images = await generatePreviewVariants(source, filter, intensity);
+        mode = 'preview';
+        storageMode = 'preview';
+        requestMode = 'preview';
       }
     } else {
       images = await generatePreviewVariants(source, filter, intensity);
       mode = 'preview';
       storageMode = 'preview';
+      requestMode = 'preview';
     }
     await new Promise((resolve) => window.setTimeout(resolve, 900));
-    return { images, mode, storageMode, warningMessage };
+    return { images, mode, storageMode, warningMessage, requestMode };
   } finally {
     window.clearInterval(ticker);
     updateProgress(progressElement, 100);
@@ -1675,34 +1727,83 @@ async function initTryPage() {
   const byokSummary = document.getElementById('byok-summary');
   const byokAccountInput = document.getElementById('cf-account-id');
   const byokTokenInput = document.getElementById('cf-api-token');
-  const byokModeButtons = byokPanel ? Array.from(byokPanel.querySelectorAll('[data-byok-mode]')) : [];
+  const byokStorageButtons = byokPanel ? Array.from(byokPanel.querySelectorAll('[data-byok-storage]')) : [];
   const byokClearButton = document.getElementById('byok-clear-button');
+  const byokTestButton = document.getElementById('byok-test-button');
   const byokSessionUsage = document.getElementById('byok-session-usage');
+  const byokStorageDetail = document.getElementById('byok-storage-detail');
+  const byokConnectionStatus = document.getElementById('byok-connection-status');
+  const byokStatusBanner = document.getElementById('byok-status-banner');
+  const byokStatusTitle = document.getElementById('byok-status-title');
+  const byokStatusDetail = document.getElementById('byok-status-detail');
+  const byokStatusPrimary = document.getElementById('byok-status-primary');
+  const byokStatusSetup = document.getElementById('byok-status-setup');
+  const byokInlineSettings = document.getElementById('byok-inline-settings');
   const cameraButton = document.getElementById('camera-button');
   const params = new URLSearchParams(window.location.search);
   const requestedId = params.get('id');
+  const requestedCustom = params.get('custom');
 
   const info = await loadCatalog();
   const { catalog } = info;
   const health = await loadHealthSnapshot();
+  let requestedCustomFilter = null;
+  let requestedCustomError = '';
+  if (requestedCustom) {
+    try {
+      requestedCustomFilter = createCustomFilterEntry(decodeBase64Json(requestedCustom), catalog);
+      if (!requestedCustomFilter) throw new Error('invalid_custom_filter');
+    } catch (error) {
+      requestedCustomError = 'This shared custom filter link is invalid or incomplete.';
+      console.error(error);
+    }
+  }
   renderCatalogNotice(noticeTarget, info);
   renderHealthNotice(noticeTarget, health);
+  if (noticeTarget && requestedCustomError) {
+    noticeTarget.insertAdjacentHTML('beforeend', `
+      <div class="notice glass-panel">
+        <div>
+          <strong>Shared custom filter unavailable</strong>
+          <p>${escapeHtml(requestedCustomError)} We loaded the standard catalog instead.</p>
+        </div>
+      </div>`);
+  }
 
   const state = {
     catalog,
     health,
-    filter: catalog.filters.find((item) => item.id === requestedId) || sortFilters(catalog.filters, 'popular')[0],
+    filter: requestedCustomFilter || catalog.filters.find((item) => item.id === requestedId) || sortFilters(catalog.filters, 'popular')[0],
     sourceDataUrl: '',
     sourceBlob: null,
     variants: [],
     activeVariantIndex: 0,
     outputMode: '',
     storageMode: '',
+    lastTransformSource: '',
     latestResultBlob: null,
-    byok: loadByokSession(),
+    byok: loadByokSettings(),
+    byokHealth: loadCachedByokHealth(loadByokSettings()),
+    byokHealthError: '',
+    demoUsage: await loadDemoUsage(requestedCustomFilter ? '' : (requestedId || '')),
     helpHtml: '',
+    customLinkError: requestedCustomError,
   };
 
+  const buildHealthMessage = (remaining) => `Connected — ${formatNumber(Math.max(0, Number(remaining) || 0))} neurons available today.`;
+  const getDemoRemainingCount = () => {
+    if (Number.isFinite(Number(state.demoUsage?.remaining))) return Math.max(0, Number(state.demoUsage.remaining));
+    if (Number.isFinite(Number(state.health?.limits?.maxFreeTransformsPerIp))) return Number(state.health.limits.maxFreeTransformsPerIp);
+    return 0;
+  };
+  const getStorageCopy = () => state.byok.storageMode === BYOK_STORAGE_MODES.SESSION
+    ? 'Credentials are saved in sessionStorage and clear when this tab closes.'
+    : 'Credentials are saved in localStorage on this browser until you clear them.';
+  const setByokConnectionMessage = (message, tone = 'default') => {
+    if (!byokConnectionStatus) return;
+    byokConnectionStatus.textContent = message;
+    byokConnectionStatus.dataset.tone = tone;
+  };
   const updateSessionUsageDisplay = () => {
     if (!byokSessionUsage) return;
     const used = getSessionNeurons();
@@ -1713,31 +1814,67 @@ async function initTryPage() {
     byokSessionUsage.textContent = label;
   };
 
+  const renderByokStatusBanner = () => {
+    if (!byokStatusBanner || !byokStatusTitle || !byokStatusDetail || !byokStatusPrimary) return;
+    if (state.byok.hasCredentials) {
+      const storageLabel = state.byok.storageMode === BYOK_STORAGE_MODES.SESSION ? 'session only' : 'this browser';
+      const healthy = state.byokHealth?.status === 'ok';
+      byokStatusBanner.dataset.variant = healthy ? 'configured' : state.byokHealthError ? 'warning' : 'configured';
+      byokStatusTitle.textContent = healthy
+        ? `🟢 Your Cloudflare key · ${formatNumber(state.byokHealth.neuronsRemaining)} neurons available`
+        : '🟢 Cloudflare key saved';
+      byokStatusDetail.textContent = healthy
+        ? `Account ${state.byok.maskedAccountId || 'configured'} · Stored in ${storageLabel} · Sent only to this site over HTTPS request headers.`
+        : state.byokHealthError || `Account ${state.byok.maskedAccountId || 'configured'} is stored in ${storageLabel}. Test the connection before your next transform.`;
+      byokStatusPrimary.textContent = 'Settings ⚙';
+      byokStatusSetup.textContent = 'Cloudflare guide →';
+    } else {
+      byokStatusBanner.dataset.variant = 'demo';
+      byokStatusTitle.textContent = `🔑 Using demo mode — ${getDemoRemainingCount()} free transforms left today`;
+      byokStatusDetail.textContent = 'Add your free Cloudflare key for unlimited access. Demo requests stay on this site and use the shared rate-limited proxy.';
+      byokStatusPrimary.textContent = 'Add your key →';
+      byokStatusSetup.textContent = 'Set up in 2 minutes →';
+    }
+  };
+
   const updateByokPanelUi = () => {
-    const hasCreds = Boolean(state.byok.accountId && state.byok.apiToken);
-    const liveReady = state.byok.mode === BYOK_MODES.LIVE && hasCreds;
-    byokModeButtons.forEach((button) => {
-      const targetMode = button.dataset.byokMode;
-      button.setAttribute('aria-pressed', String(targetMode === state.byok.mode));
+    byokStorageButtons.forEach((button) => {
+      const targetMode = button.dataset.byokStorage;
+      button.setAttribute('aria-pressed', String(targetMode === state.byok.storageMode));
     });
     if (byokSummary) {
-      byokSummary.textContent = liveReady
-        ? 'Live mode will call Cloudflare directly with your credentials.'
-        : hasCreds
-          ? 'Switch to live mode whenever you are ready to run with your own Cloudflare key.'
-          : 'Enter your Cloudflare account ID and API token to unlock live transforms.';
+      byokSummary.textContent = state.byok.hasCredentials
+        ? 'Transforms keep posting to this site backend, which forwards your Cloudflare credentials as secure request headers.'
+        : 'Add your Cloudflare account ID and API token to upgrade from demo mode without leaving the page.';
+    }
+    if (byokStorageDetail) byokStorageDetail.textContent = getStorageCopy();
+    if (byokTestButton) byokTestButton.disabled = !state.byok.hasCredentials || !state.byok.accountIdValid;
+    if (state.byokHealth?.status === 'ok') {
+      setByokConnectionMessage(buildHealthMessage(state.byokHealth.neuronsRemaining), 'success');
+    } else if (state.byokHealthError) {
+      setByokConnectionMessage(state.byokHealthError, 'error');
+    } else if (state.byok.accountId && !state.byok.accountIdValid) {
+      setByokConnectionMessage('Account ID should be 32 hexadecimal characters.', 'error');
+    } else if (state.byok.hasCredentials) {
+      setByokConnectionMessage('Credentials are saved locally. Test the connection before your next transform.');
+    } else {
+      setByokConnectionMessage('No Cloudflare key saved yet. Demo mode will use the site proxy limits.');
     }
     updateSessionUsageDisplay();
+    renderByokStatusBanner();
   };
 
   const updateTransformButtonLabel = () => {
     const filter = state.filter;
     if (!filter) return;
     const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly;
+    const isCustomFilter = Boolean(filter.customDefinition);
     transformButton.textContent = filter.clientSideOnly
       ? 'Apply effect instantly'
-      : state.byok.mode === BYOK_MODES.LIVE
-        ? 'Transform with your Cloudflare key'
+      : isCustomFilter && !state.byok.hasCredentials && demoOnlyOnWeb
+        ? 'Add your key to run this custom filter'
+      : state.byok.hasCredentials
+        ? isCustomFilter ? 'Run custom filter with your Cloudflare key' : 'Transform with your Cloudflare key'
         : demoOnlyOnWeb
           ? 'Preview only on web'
           : filter.isDemoFilter
@@ -1745,66 +1882,109 @@ async function initTryPage() {
             : 'Transform with this deployment';
   };
 
-  const setByokMode = (mode) => {
-    const normalized = mode === BYOK_MODES.LIVE ? BYOK_MODES.LIVE : BYOK_MODES.DEMO;
-    if (normalized === BYOK_MODES.LIVE && !(state.byok.accountId && state.byok.apiToken)) {
-      status.textContent = 'Live mode requires both a Cloudflare account ID and API token.';
-      state.byok.mode = BYOK_MODES.DEMO;
-      writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, BYOK_MODES.DEMO);
-      updateByokPanelUi();
-      updateTransformButtonLabel();
-      return;
+  const syncByokState = (nextState, { resetHealth = true } = {}) => {
+    state.byok = nextState;
+    if (resetHealth) {
+      state.byokHealth = null;
+      state.byokHealthError = '';
     }
-    state.byok.mode = normalized;
-    writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, normalized);
+    if (byokAccountInput && byokAccountInput.value !== nextState.accountId) byokAccountInput.value = nextState.accountId;
+    if (byokTokenInput && byokTokenInput.value !== nextState.apiToken) byokTokenInput.value = nextState.apiToken;
     updateByokPanelUi();
     updateTransformButtonLabel();
   };
 
-  const handleByokInputChange = () => {
-    const accountId = (byokAccountInput?.value || '').trim();
-    const apiToken = (byokTokenInput?.value || '').trim();
-    state.byok.accountId = accountId;
-    state.byok.apiToken = apiToken;
-    if (accountId) writeSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID, accountId);
-    else removeSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID);
-    if (apiToken) writeSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN, apiToken);
-    else removeSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN);
-    if (!(accountId && apiToken)) {
-      state.byok.mode = BYOK_MODES.DEMO;
-      writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, BYOK_MODES.DEMO);
-    }
-    updateByokPanelUi();
-    updateTransformButtonLabel();
+  const persistByokInputs = (storageMode = state.byok.storageMode) => {
+    const nextState = saveByokSettings({
+      accountId: byokAccountInput?.value || '',
+      apiToken: byokTokenInput?.value || '',
+      storageMode,
+    });
+    syncByokState(nextState);
+    return nextState;
   };
 
   const clearByokCredentials = () => {
-    if (byokAccountInput) byokAccountInput.value = '';
-    if (byokTokenInput) byokTokenInput.value = '';
-    state.byok.accountId = '';
-    state.byok.apiToken = '';
-    state.byok.mode = BYOK_MODES.DEMO;
-    removeSessionStorageValue(BYOK_SESSION_KEYS.ACCOUNT_ID);
-    removeSessionStorageValue(BYOK_SESSION_KEYS.API_TOKEN);
-    writeSessionStorageValue(BYOK_SESSION_KEYS.MODE, BYOK_MODES.DEMO);
+    const nextState = clearByokSettings({ storageMode: state.byok.storageMode });
     resetSessionNeurons();
-    updateByokPanelUi();
-    updateTransformButtonLabel();
-    status.textContent = 'Live mode credentials cleared.';
+    clearCachedByokHealth();
+    syncByokState(nextState);
+    status.textContent = 'Cloudflare credentials cleared. Demo mode is active again.';
+  };
+
+  const testByokConnection = async ({ announce = true } = {}) => {
+    if (!state.byok.hasCredentials) {
+      state.byokHealth = null;
+      state.byokHealthError = 'Add both your Account ID and API token before testing the connection.';
+      updateByokPanelUi();
+      return null;
+    }
+    if (!state.byok.accountIdValid) {
+      state.byokHealth = null;
+      state.byokHealthError = 'Account ID should be 32 hexadecimal characters.';
+      updateByokPanelUi();
+      return null;
+    }
+
+    state.byokHealth = null;
+    state.byokHealthError = '';
+    setByokConnectionMessage('Testing your Cloudflare connection…');
+    if (announce) status.textContent = 'Testing your Cloudflare key…';
+    try {
+      const response = await fetch('/api/health', {
+        cache: 'no-store',
+        headers: buildCloudflareProxyHeaders(state.byok),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error?.message || `Health check failed with ${response.status}`);
+      }
+      state.byokHealth = cacheByokHealth({
+        ...payload.data,
+        message: payload.data?.message || buildHealthMessage(payload.data?.neuronsRemaining),
+        testedAt: new Date().toISOString(),
+      }, state.byok);
+      state.byokHealthError = '';
+      updateByokPanelUi();
+      if (announce) {
+        status.textContent = state.byokHealth.message;
+        showToast(state.byokHealth.message);
+      }
+      return state.byokHealth;
+    } catch (error) {
+      state.byokHealth = null;
+      state.byokHealthError = error?.message || 'Unable to verify your Cloudflare key right now.';
+      updateByokPanelUi();
+      if (announce) {
+        status.textContent = state.byokHealthError;
+        showToast(state.byokHealthError);
+      }
+      return null;
+    }
+  };
+
+  const refreshDemoUsage = async (filterId = state.filter?.id) => {
+    const usage = await loadDemoUsage(state.filter?.customDefinition ? '' : filterId);
+    if (usage) state.demoUsage = usage;
+    renderUsageGrid(usageGrid, catalog, state.filter, state.demoUsage);
+    renderByokStatusBanner();
+    return state.demoUsage;
   };
 
   const getStageBadge = (filter) => {
-    if (state.outputMode === 'live') {
-      return '<span class="badge badge--brand">Live BYOK result · direct Cloudflare call</span>';
+    if (filter?.customDefinition && Boolean(state.health?.limits?.demoMode) && !state.byok.hasCredentials) {
+      return '<span class="badge badge--warning">Custom filters on the public website require your Cloudflare key</span>';
     }
     if (state.outputMode === 'api') {
-      return '<span class="badge badge--success">Demo result · /api/transform</span>';
+      return state.lastTransformSource === 'cloudflare'
+        ? '<span class="badge badge--brand">BYOK result · secure proxy via /api/transform</span>'
+        : '<span class="badge badge--success">Demo result · /api/transform</span>';
     }
     if (filter.clientSideOnly) {
       return '<span class="badge badge--accent">Client-side effect · no AI upload</span>';
     }
-    if (state.byok.mode === BYOK_MODES.LIVE && state.byok.accountId && state.byok.apiToken) {
-      return '<span class="badge badge--brand">Live BYOK mode enabled · transforms run on your Cloudflare account</span>';
+    if (state.byok.hasCredentials) {
+      return '<span class="badge badge--brand">Cloudflare key ready · transforms proxy through this site</span>';
     }
     if (Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly) {
       return '<span class="badge badge--warning">Catalog preview only on the public web demo · use the app or your own deployment for live runs</span>';
@@ -1820,9 +2000,10 @@ async function initTryPage() {
 
   const setSummary = async () => {
     const filter = state.filter;
+    const isCustomFilter = Boolean(filter?.customDefinition);
     const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly;
     const related = sortFilters(catalog.filters.filter((item) => item.category === filter.category && item.id !== filter.id), 'popular').slice(0, 6);
-    trySelectionTitle.textContent = requestedId ? 'Switch filters' : 'Popular filters to start';
+    trySelectionTitle.textContent = isCustomFilter ? 'Switch to catalog filters' : requestedId ? 'Switch filters' : 'Popular filters to start';
     selection.innerHTML = createSelectionMarkup(sortFilters(catalog.filters, 'popular').slice(0, 6));
     breadcrumb.innerHTML = `
       <a href="/index.html">Home</a>
@@ -1831,27 +2012,29 @@ async function initTryPage() {
       <span>→</span>
       <span>${escapeHtml(filter.name)}</span>`;
     summary.innerHTML = `
-      <span class="page-eyebrow">${filter.categoryMeta.emoji} ${escapeHtml(filter.categoryDisplay)}</span>
+      <span class="page-eyebrow">${filter.categoryMeta.emoji} ${escapeHtml(filter.categoryDisplay)}${isCustomFilter ? ' · Shared custom filter' : ''}</span>
       <h1>${escapeHtml(filter.name)}</h1>
       <p class="lead">${escapeHtml(filter.description)}</p>
       <div class="filter-summary__badges">
         <span class="badge badge--brand">${capitalize(filter.type)}</span>
         <span class="badge">${escapeHtml(filter.modelLabel)}</span>
         <span class="badge">${filter.estimatedNeurons} neurons</span>
-        ${filter.isDemoFilter ? '<span class="badge badge--success">FREE</span>' : '<span class="badge badge--warning">Bring your own key</span>'}
+        ${isCustomFilter ? '<span class="badge badge--warning">Shared custom</span>' : filter.isDemoFilter ? '<span class="badge badge--success">FREE</span>' : '<span class="badge badge--warning">Bring your own key</span>'}
         ${filter.clientSideOnly ? '<span class="badge badge--accent">Browser-only</span>' : ''}
       </div>`;
     effectsControls.classList.toggle('hidden', !filter.clientSideOnly);
     transformButton.textContent = filter.clientSideOnly
       ? 'Apply effect instantly'
-      : demoOnlyOnWeb
-        ? 'Preview only on web'
-        : filter.isDemoFilter
-        ? 'Transform — FREE ✨'
-        : 'Transform with this deployment';
+      : state.byok.hasCredentials
+        ? 'Transform with your Cloudflare key'
+        : demoOnlyOnWeb
+          ? 'Preview only on web'
+          : filter.isDemoFilter
+            ? 'Transform — FREE ✨'
+            : 'Transform with this deployment';
     stageSlot.innerHTML = renderStagePlaceholder(filter);
     stageNote.innerHTML = getStageBadge(filter);
-    renderUsageGrid(usageGrid, catalog, filter);
+    renderUsageGrid(usageGrid, catalog, filter, state.demoUsage);
     overviewTab.innerHTML = renderOverview(filter);
     state.helpHtml = await getHelpHtml(filter);
     helpTab.innerHTML = state.helpHtml;
@@ -1860,7 +2043,7 @@ async function initTryPage() {
     updateMeta({
       title: `${filter.name} · ${SITE.name}`,
       description: `${filter.description} Upload a photo, preview the transform flow, and browse related filters on ${SITE.name}.`,
-      canonicalPath: `/try.html?id=${encodeURIComponent(filter.id)}`,
+      canonicalPath: buildTryHref(filter),
       image: filter.previewAfter,
     });
     updateSchema({
@@ -1871,13 +2054,15 @@ async function initTryPage() {
       operatingSystem: 'Any',
       description: filter.description,
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-      url: `${SITE.baseUrl}/try.html?id=${encodeURIComponent(filter.id)}`,
+      url: `${SITE.baseUrl}${buildTryHref(filter)}`,
     });
     updateTransformButtonLabel();
     updateByokPanelUi();
-    status.textContent = state.byok.mode === BYOK_MODES.LIVE
-      ? 'Live mode routes transforms through your Cloudflare account. Upload a photo to begin.'
-      : 'Upload a clear face photo for the best result.';
+    status.textContent = state.byok.hasCredentials
+      ? 'Your Cloudflare key is ready. Upload a photo to run it through the secure proxy.'
+      : isCustomFilter && Boolean(state.health?.limits?.demoMode)
+        ? 'This shared custom filter needs your Cloudflare key on the public website.'
+        : 'Upload a clear face photo for the best result.';
   };
 
   const renderResult = () => {
@@ -1899,7 +2084,9 @@ async function initTryPage() {
       beforeLabel: 'Original',
       afterLabel: state.outputMode === 'api' ? `${filter.name} result` : `${filter.name} preview`,
       caption: state.outputMode === 'api'
-        ? 'Rendered from /api/transform'
+        ? state.lastTransformSource === 'cloudflare'
+          ? 'Rendered from /api/transform with your Cloudflare credentials'
+          : 'Rendered from /api/transform'
         : 'Preview mode kept the flow usable because the live AI result was unavailable',
     });
     resultActions.classList.remove('hidden');
@@ -1942,6 +2129,7 @@ async function initTryPage() {
     state.activeVariantIndex = 0;
     state.outputMode = '';
     state.storageMode = '';
+    state.lastTransformSource = '';
     state.latestResultBlob = null;
     fileInput.value = '';
     if (cameraInput) cameraInput.value = '';
@@ -1984,22 +2172,48 @@ async function initTryPage() {
     }
   });
 
-  byokModeButtons.forEach((button) => {
-    button.addEventListener('click', () => setByokMode(button.dataset.byokMode));
+  byokStorageButtons.forEach((button) => {
+    button.addEventListener('click', () => persistByokInputs(button.dataset.byokStorage));
   });
-  byokAccountInput?.addEventListener('input', handleByokInputChange);
-  byokTokenInput?.addEventListener('input', handleByokInputChange);
+  byokAccountInput?.addEventListener('input', () => persistByokInputs());
+  byokTokenInput?.addEventListener('input', () => persistByokInputs());
   byokClearButton?.addEventListener('click', clearByokCredentials);
+  byokTestButton?.addEventListener('click', async () => {
+    await testByokConnection();
+  });
+  byokStatusPrimary?.addEventListener('click', () => {
+    if (state.byok.hasCredentials) openSettingsSurface('try-banner');
+    else window.dispatchEvent(new CustomEvent('gic:open-setup', { detail: { source: 'try-banner-primary' } }));
+  });
+  byokStatusSetup?.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.dispatchEvent(new CustomEvent('gic:open-setup', { detail: { source: 'try-banner' } }));
+  });
+  byokInlineSettings?.addEventListener('click', () => openSettingsSurface('try-inline-card'));
+
+  window.addEventListener(BYOK_EVENTS.CHANGED, async () => {
+    syncByokState(loadByokSettings(), { resetHealth: false });
+    state.byokHealth = loadCachedByokHealth(loadByokSettings());
+    updateByokPanelUi();
+    updateTransformButtonLabel();
+    if (state.byok.hasCredentials && !state.byokHealth) {
+      await testByokConnection({ announce: false });
+    }
+  });
+  window.addEventListener('gic:byok-health', (event) => {
+    state.byokHealth = event.detail || null;
+    state.byokHealthError = '';
+    updateByokPanelUi();
+  });
 
   transformButton.addEventListener('click', async () => {
     if (!state.filter) return;
-    const liveModeActive = state.byok.mode === BYOK_MODES.LIVE;
-    if (liveModeActive && !(state.byok.accountId && state.byok.apiToken)) {
-      status.textContent = 'Enter your Cloudflare account ID and API token to run live transforms.';
-      showToast('Live mode needs your Cloudflare credentials.');
+    if (state.filter.customDefinition && Boolean(state.health?.limits?.demoMode) && !state.byok.hasCredentials) {
+      status.textContent = 'Shared custom filters on the public website need your Cloudflare key.';
+      window.dispatchEvent(new CustomEvent('gic:open-setup', { detail: { source: 'try-custom-transform' } }));
       return;
     }
-    if (Boolean(state.health?.limits?.demoMode) && !state.filter.isDemoFilter && !state.filter.clientSideOnly) {
+    if (Boolean(state.health?.limits?.demoMode) && !state.byok.hasCredentials && !state.filter.isDemoFilter && !state.filter.clientSideOnly) {
       showToast('This filter is preview-only on the public web demo. Pick a FREE filter, use the app, or self-host with DEMO_MODE=false.');
       return;
     }
@@ -2018,27 +2232,43 @@ async function initTryPage() {
         intensity,
         statusElement: status,
         progressElement: progress,
-        catalog,
         byok: state.byok,
+        customFilter: state.filter.customDefinition || null,
       });
       state.variants = result.images;
       state.outputMode = result.mode;
       state.storageMode = result.storageMode || state.storageMode;
+      state.lastTransformSource = result.requestMode || '';
       state.latestResultBlob = result.blob || null;
       state.activeVariantIndex = 0;
       renderResult();
-      if (result.mode === 'live') {
+      if (result.requestMode === 'cloudflare') {
         addSessionNeurons(state.filter.estimatedNeurons);
         updateSessionUsageDisplay();
+        if (state.byokHealth?.status === 'ok') {
+          const nextRemaining = Math.max(0, Number(state.byokHealth.neuronsRemaining || 0) - Number(state.filter.estimatedNeurons || 0));
+          state.byokHealth = {
+            ...state.byokHealth,
+            neuronsUsed: Number(state.byokHealth.neuronsUsed || 0) + Number(state.filter.estimatedNeurons || 0),
+            neuronsRemaining: nextRemaining,
+            message: buildHealthMessage(nextRemaining),
+          };
+          cacheByokHealth({
+            ...state.byokHealth,
+            testedAt: new Date().toISOString(),
+          }, state.byok);
+        }
       }
-      if (!state.filter.clientSideOnly && state.filter.isDemoFilter && result.mode === 'api') {
+      if (!state.filter.clientSideOnly && result.mode === 'api' && result.requestMode !== 'cloudflare') {
         incrementUsage(state.filter);
+        await refreshDemoUsage(state.filter.id);
       }
-      renderUsageGrid(usageGrid, catalog, state.filter);
+      renderUsageGrid(usageGrid, catalog, state.filter, state.demoUsage);
+      renderByokStatusBanner();
       const successMessage = result.warningMessage
         ? result.warningMessage
-        : result.mode === 'live'
-          ? 'Live transform complete. Save or share the result.'
+        : result.requestMode === 'cloudflare'
+          ? 'Transform complete through your Cloudflare key. Save or share the result.'
           : result.mode === 'api'
             ? result.storageMode === 'direct'
               ? 'Transform complete. Save the image now or share the filter link while direct mode is active.'
@@ -2070,7 +2300,7 @@ async function initTryPage() {
   });
 
   shareFilterButton?.addEventListener('click', async () => {
-    const url = `${window.location.origin}/try.html?id=${encodeURIComponent(state.filter.id)}`;
+    const url = buildTryShareUrl(state.filter);
     const text = `${state.filter.shareText} ${url}`;
     try {
       if (navigator.share) {
@@ -2092,7 +2322,7 @@ async function initTryPage() {
       showToast('Run a transform before sharing a result.');
       return;
     }
-    const shareUrl = `${window.location.origin}/try.html?id=${encodeURIComponent(state.filter.id)}`;
+    const shareUrl = buildTryShareUrl(state.filter);
     const shareText = `${state.filter.shareText} ${shareUrl}`;
     try {
       if (navigator.share) {
@@ -2137,8 +2367,631 @@ async function initTryPage() {
   updateByokPanelUi();
   updateTransformButtonLabel();
   await setSummary();
+  await refreshDemoUsage(state.filter?.id);
+  if (state.byok.hasCredentials) {
+    await testByokConnection({ announce: false });
+  } else {
+    renderByokStatusBanner();
+  }
   renderResult();
   track('filter_view', { filterId: state.filter.id });
+}
+
+async function initBuildPage() {
+  const noticeTarget = document.getElementById('build-notice');
+  const modelGrid = document.getElementById('build-model-grid');
+  const promptInput = document.getElementById('build-prompt');
+  const promptCounter = document.getElementById('build-prompt-counter');
+  const negativeInput = document.getElementById('build-negative-prompt');
+  const negativeCounter = document.getElementById('build-negative-counter');
+  const suggestionsTarget = document.getElementById('build-suggestions');
+  const shuffleSuggestionsButton = document.getElementById('build-suggestions-shuffle');
+  const strengthInput = document.getElementById('build-strength');
+  const strengthValue = document.getElementById('build-strength-value');
+  const guidanceInput = document.getElementById('build-guidance');
+  const guidanceValue = document.getElementById('build-guidance-value');
+  const dimensionButtons = Array.from(document.querySelectorAll('[data-build-dimension]'));
+  const variantButtons = Array.from(document.querySelectorAll('[data-build-variants]'));
+  const uploadDropzone = document.getElementById('build-upload-dropzone');
+  const buildFileInput = document.getElementById('build-file-input');
+  const buildCameraInput = document.getElementById('build-camera-input');
+  const buildCameraButton = document.getElementById('build-camera-button');
+  const runButtons = Array.from(document.querySelectorAll('[data-build-run]'));
+  const stickyBar = document.getElementById('build-sticky-bar');
+  const stickyLabel = document.getElementById('build-sticky-label');
+  const cancelButton = document.getElementById('build-cancel-button');
+  const keepWaitingButton = document.getElementById('build-keep-waiting');
+  const retryButton = document.getElementById('build-retry-button');
+  const buildProgress = document.getElementById('build-progress');
+  const buildStatus = document.getElementById('build-status');
+  const buildNoKeyBanner = document.getElementById('build-no-key-banner');
+  const buildNoKeyCta = document.getElementById('build-no-key-cta');
+  const buildStage = document.getElementById('build-stage');
+  const buildVariants = document.getElementById('build-variant-list');
+  const buildDetails = document.getElementById('build-details');
+  const nameInput = document.getElementById('build-name');
+  const descriptionInput = document.getElementById('build-description');
+  const descriptionCounter = document.getElementById('build-description-counter');
+  const categorySelect = document.getElementById('build-category');
+  const tagsInput = document.getElementById('build-tags');
+  const shareInput = document.getElementById('build-share-url');
+  const copyShareButton = document.getElementById('build-copy-share');
+  const nativeShareButton = document.getElementById('build-native-share');
+  const shareHint = document.getElementById('build-share-hint');
+  const downloadButton = document.getElementById('build-download-button');
+  const sectionCards = Array.from(document.querySelectorAll('[data-build-section]'));
+  const sectionBadges = Object.fromEntries(sectionCards.map((card) => [card.dataset.buildSection, card.querySelector('[data-section-state]')]));
+
+  const info = await loadCatalog();
+  const { catalog } = info;
+  const health = await loadHealthSnapshot();
+  renderCatalogNotice(noticeTarget, info);
+  renderHealthNotice(noticeTarget, health);
+  if (categorySelect && !categorySelect.options.length) {
+    categorySelect.innerHTML = catalog.categories.map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`).join('');
+  }
+
+  const builderModels = [
+    { id: 'flux2-klein-9b', tagline: 'Highest quality', bestFor: 'Faces, character styles, polished artistic looks', recommended: true },
+    { id: 'flux2-klein-4b', tagline: 'Faster results', bestFor: 'Quick iterations and lighter creative edits' },
+    { id: 'sd15-img2img', tagline: 'Classic look', bestFor: 'Painterly, retro, and softer style transfers' },
+    { id: 'sd15-inpainting', tagline: 'Mask-based edits', bestFor: 'Specific region replacement — web mask tools coming soon', disabled: true },
+  ].map((entry) => ({
+    ...entry,
+    label: MODEL_OPTIONS.find((option) => option.id === entry.id)?.label || entry.id,
+    description: MODEL_OPTIONS.find((option) => option.id === entry.id)?.description || entry.bestFor,
+  }));
+
+  const suggestedFilters = catalog.filters.filter((filter) => filter.prompt && !filter.clientSideOnly);
+  const initialPreferredModel = loadPreferredModel();
+  const resolvedInitialModel = initialPreferredModel !== 'default' && initialPreferredModel !== 'sd15-inpainting'
+    ? initialPreferredModel
+    : 'flux2-klein-9b';
+  const state = {
+    catalog,
+    health,
+    byok: loadByokSettings(),
+    byokHealth: loadCachedByokHealth(loadByokSettings()),
+    prompt: '',
+    negativePrompt: '',
+    model: resolvedInitialModel,
+    manualModelSelection: initialPreferredModel !== 'default' && initialPreferredModel !== 'sd15-inpainting',
+    strength: 0.65,
+    guidance: 7.5,
+    width: 768,
+    height: 768,
+    variantCount: 1,
+    sourceBlob: null,
+    sourceDataUrl: '',
+    name: 'Custom Filter',
+    description: '',
+    category: catalog.categories[0]?.id || 'artistic_styles',
+    tags: '',
+    resultImages: [],
+    activeResultIndex: 0,
+    latestResultBlob: null,
+    hasSuccessfulRun: false,
+    isRunning: false,
+    runController: null,
+    didTimeout: false,
+    slowUiVisible: false,
+    timeoutHandles: [],
+    suggestionIds: [],
+  };
+
+  const getShareDefinition = () => normalizeCustomFilterDefinition({
+    name: state.name,
+    description: state.description,
+    category: state.category,
+    prompt: state.prompt,
+    negativePrompt: state.negativePrompt,
+    model: state.model,
+    strength: state.strength,
+    guidance: state.guidance,
+    width: state.width,
+    height: state.height,
+    variantCount: state.variantCount,
+    tags: state.tags,
+  });
+
+  const getPreviewFilter = () => createCustomFilterEntry(getShareDefinition(), catalog);
+  const getShareUrl = () => {
+    const filter = getPreviewFilter();
+    return filter ? buildTryShareUrl(filter) : '';
+  };
+
+  const clearTimeoutHandles = () => {
+    state.timeoutHandles.forEach((handle) => window.clearTimeout(handle));
+    state.timeoutHandles = [];
+  };
+
+  const markSection = (id, ready, complete = ready) => {
+    const badge = sectionBadges[id];
+    const card = sectionCards.find((entry) => entry.dataset.buildSection === id);
+    if (!badge || !card) return;
+    card.dataset.ready = String(ready);
+    card.dataset.complete = String(complete);
+    badge.textContent = complete ? '✓ Complete' : ready ? '• Ready' : '○ Incomplete';
+  };
+
+  const renderSuggestions = () => {
+    if (!suggestionsTarget) return;
+    const pool = [...suggestedFilters];
+    const picked = [];
+    while (pool.length && picked.length < 3) {
+      const index = Math.floor(Math.random() * pool.length);
+      picked.push(pool.splice(index, 1)[0]);
+    }
+    state.suggestionIds = picked.map((entry) => entry.id);
+    suggestionsTarget.innerHTML = picked.map((filter) => `
+      <article class="detail-card build-suggestion">
+        <strong>${escapeHtml(filter.name)}</strong>
+        <p>${escapeHtml(filter.prompt)}</p>
+        <button class="button-link" type="button" data-build-suggestion="${filter.id}">Use this prompt</button>
+      </article>`).join('');
+    suggestionsTarget.querySelectorAll('[data-build-suggestion]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const match = suggestedFilters.find((filter) => filter.id === button.dataset.buildSuggestion);
+        if (!match) return;
+        state.prompt = match.prompt || state.prompt;
+        state.negativePrompt = match.negativePrompt || state.negativePrompt;
+        if (promptInput) promptInput.value = state.prompt;
+        if (negativeInput) negativeInput.value = state.negativePrompt;
+        syncFormUi();
+      });
+    });
+  };
+
+  const renderModelCards = () => {
+    if (!modelGrid) return;
+    modelGrid.innerHTML = builderModels.map((model) => `
+      <button class="button-ghost build-model-card" type="button" data-build-model="${model.id}" data-disabled="${String(Boolean(model.disabled))}" aria-pressed="${String(state.model === model.id)}">
+        <div class="build-model-card__topline">
+          <strong>${escapeHtml(model.label)}</strong>
+          ${model.recommended ? '<span class="badge badge--brand">Recommended</span>' : model.disabled ? '<span class="badge">Soon</span>' : ''}
+        </div>
+        <p>${escapeHtml(model.tagline)}</p>
+        <span class="microcopy">${escapeHtml(model.bestFor)}</span>
+      </button>`).join('');
+    modelGrid.querySelectorAll('[data-build-model]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.dataset.disabled === 'true') {
+          showToast('Web inpainting masks are coming soon. Pick another model for now.');
+          return;
+        }
+        state.model = button.dataset.buildModel;
+        state.manualModelSelection = true;
+        syncFormUi();
+      });
+    });
+  };
+
+  const renderResults = () => {
+    const previewFilter = getPreviewFilter();
+    if (!state.sourceDataUrl) {
+      buildStage.innerHTML = `
+        <div class="stage-placeholder stage-placeholder--example">
+          <div class="stage-placeholder__copy">
+            <h3>Upload a photo to test your custom filter</h3>
+            <p>Once you add a photo, you can compare your original with the transformed result right here.</p>
+          </div>
+          ${previewFilter ? renderBeforeAfter({
+            beforeUrl: previewFilter.previewBefore,
+            afterUrl: previewFilter.previewAfter,
+            beforeLabel: 'Catalog-style preview',
+            afterLabel: previewFilter.name,
+            caption: 'The live test area below will use your uploaded photo.',
+          }) : ''}
+        </div>`;
+      buildVariants.innerHTML = '';
+      if (downloadButton) downloadButton.disabled = true;
+      return;
+    }
+
+    if (!state.resultImages.length) {
+      buildStage.innerHTML = renderBeforeAfter({
+        beforeUrl: state.sourceDataUrl,
+        afterUrl: state.sourceDataUrl,
+        beforeLabel: 'Original',
+        afterLabel: 'Waiting for test result',
+        caption: state.isRunning ? 'Running your custom filter now…' : 'Run a test to see the transformed comparison here.',
+      });
+      buildVariants.innerHTML = '';
+      if (downloadButton) downloadButton.disabled = true;
+      initBeforeAfterSliders(buildStage);
+      return;
+    }
+
+    const activeImage = state.resultImages[state.activeResultIndex] || state.resultImages[0];
+    buildStage.innerHTML = renderBeforeAfter({
+      beforeUrl: state.sourceDataUrl,
+      afterUrl: activeImage,
+      beforeLabel: 'Original',
+      afterLabel: `${previewFilter?.name || 'Custom filter'} result`,
+      caption: 'Adjust the prompt or sliders, then rerun the test to keep refining the look.',
+    });
+    buildVariants.innerHTML = state.resultImages.map((imageUrl, index) => `
+      <article class="variant-card" data-active="${String(index === state.activeResultIndex)}">
+        <button type="button" data-build-variant-index="${index}">
+          <img src="${imageUrl}" alt="Custom filter variant ${index + 1}" />
+          <div class="variant-card__label">Variant ${index + 1}</div>
+        </button>
+      </article>`).join('');
+    buildVariants.querySelectorAll('[data-build-variant-index]').forEach((button) => {
+      button.addEventListener('click', () => {
+        state.activeResultIndex = Number(button.dataset.buildVariantIndex) || 0;
+        renderResults();
+      });
+    });
+    if (downloadButton) downloadButton.disabled = false;
+    initBeforeAfterSliders(buildStage);
+  };
+
+  const renderDetails = () => {
+    const definition = getShareDefinition();
+    const previewFilter = getPreviewFilter();
+    if (!definition || !previewFilter) {
+      buildDetails.innerHTML = '<p class="microcopy">Finish the prompt and choose a model to unlock the live custom filter summary.</p>';
+      return;
+    }
+    buildDetails.innerHTML = `
+      <div class="markdown-content">
+        <p><strong>${escapeHtml(definition.name)}</strong> · ${escapeHtml(previewFilter.modelLabel)} · ${definition.width}×${definition.height}</p>
+        <ul>
+          <li>Prompt: ${escapeHtml(definition.prompt)}</li>
+          <li>Negative prompt: ${escapeHtml(definition.negativePrompt || 'None')}</li>
+          <li>Strength ${definition.strength.toFixed(2)} · Guidance ${definition.guidance.toFixed(1)} · ${definition.variantCount} result${definition.variantCount > 1 ? 's' : ''}</li>
+          <li>Tags: ${escapeHtml(definition.tags.join(', ') || 'None')}</li>
+        </ul>
+      </div>`;
+    if (shareInput) shareInput.value = state.hasSuccessfulRun ? getShareUrl() : '';
+  };
+
+  const syncFormUi = () => {
+    if (promptCounter) promptCounter.textContent = `${state.prompt.length}/500`;
+    if (negativeCounter) negativeCounter.textContent = `${state.negativePrompt.length}/300`;
+    if (descriptionCounter) descriptionCounter.textContent = `${state.description.length}/120`;
+    if (strengthValue) strengthValue.textContent = state.strength.toFixed(2);
+    if (guidanceValue) guidanceValue.textContent = state.guidance.toFixed(1);
+    dimensionButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', String(`${state.width}x${state.height}` === button.dataset.buildDimension));
+    });
+    variantButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', String(Number(button.dataset.buildVariants) === state.variantCount));
+    });
+    if (stickyBar) stickyBar.hidden = !(state.prompt.trim() && state.model);
+    if (stickyLabel) stickyLabel.textContent = state.hasSuccessfulRun
+      ? 'Adjust any section, then rerun your test.'
+      : state.prompt.trim()
+        ? 'Prompt ready — add a photo and run your first test.'
+        : 'Write a prompt and pick a model to unlock Run Test.';
+    if (buildNoKeyBanner) buildNoKeyBanner.hidden = state.byok.hasCredentials;
+    if (shareHint) {
+      shareHint.textContent = state.hasSuccessfulRun
+        ? 'Anyone with this link can load your filter on the Try page. They may still need their own Cloudflare key depending on the deployment.'
+        : 'Run a successful test first to generate a shareable result link.';
+    }
+    if (copyShareButton) copyShareButton.disabled = !state.hasSuccessfulRun;
+    if (nativeShareButton) nativeShareButton.disabled = !state.hasSuccessfulRun;
+    if (downloadButton) downloadButton.disabled = !state.resultImages.length;
+    markSection('prompt', Boolean(state.prompt.trim()), state.prompt.trim().length > 10);
+    markSection('model', Boolean(state.model), Boolean(state.model));
+    markSection('params', true, true);
+    markSection('test', Boolean(state.sourceBlob), state.hasSuccessfulRun);
+    markSection('name', Boolean(state.name.trim()), Boolean(state.name.trim() && state.description.trim()));
+    markSection('share', state.hasSuccessfulRun, state.hasSuccessfulRun);
+    renderModelCards();
+    renderResults();
+    renderDetails();
+  };
+
+  const resetRunUi = ({ keepStatus = false, showRetry = false } = {}) => {
+    clearTimeoutHandles();
+    state.isRunning = false;
+    state.runController = null;
+    state.slowUiVisible = false;
+    if (buildProgress) buildProgress.hidden = true;
+    if (cancelButton) cancelButton.hidden = true;
+    if (keepWaitingButton) keepWaitingButton.hidden = true;
+    if (retryButton) retryButton.hidden = !showRetry;
+    runButtons.forEach((button) => {
+      button.disabled = false;
+      button.textContent = 'Run Test ▶';
+    });
+    if (!keepStatus && buildStatus && !state.hasSuccessfulRun) buildStatus.textContent = 'Upload a photo, then run a live test through /api/transform.';
+  };
+
+  const scheduleRunMilestones = () => {
+    clearTimeoutHandles();
+    state.timeoutHandles.push(window.setTimeout(() => {
+      if (state.isRunning && buildStatus) buildStatus.textContent = 'Transforms usually take 15–30 seconds…';
+    }, 1000));
+    state.timeoutHandles.push(window.setTimeout(() => {
+      if (state.isRunning && buildStatus) buildStatus.textContent = 'Still working — complex transforms can take up to a minute…';
+    }, 45000));
+    state.timeoutHandles.push(window.setTimeout(() => {
+      if (!state.isRunning) return;
+      state.slowUiVisible = true;
+      if (buildStatus) buildStatus.textContent = 'This is taking longer than usual.';
+      if (cancelButton) cancelButton.hidden = false;
+      if (keepWaitingButton) keepWaitingButton.hidden = false;
+    }, 90000));
+    state.timeoutHandles.push(window.setTimeout(() => {
+      if (!state.isRunning || !state.runController) return;
+      state.didTimeout = true;
+      state.runController.abort();
+      if (buildStatus) buildStatus.textContent = 'The transform timed out. Check your connection and try again.';
+      if (retryButton) retryButton.hidden = false;
+    }, 120000));
+  };
+
+  const applyUploadedFile = async (file) => {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      showToast('Please choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Please keep uploads below 5MB.');
+      return;
+    }
+    const resized = await resizeFile(file, 1024);
+    state.sourceBlob = resized.blob;
+    state.sourceDataUrl = resized.dataUrl;
+    state.resultImages = [];
+    state.activeResultIndex = 0;
+    state.hasSuccessfulRun = false;
+    if (buildStatus) buildStatus.textContent = 'Photo ready. Run a live test when you are ready.';
+    syncFormUi();
+  };
+
+  const runBuilderTest = async () => {
+    const definition = getShareDefinition();
+    const previewFilter = getPreviewFilter();
+    if (!definition || !previewFilter) {
+      showToast('Write your prompt and choose a model first.');
+      return;
+    }
+    if (previewFilter.model === 'sd15-inpainting') {
+      showToast('Web inpainting masks are coming soon. Pick another model for now.');
+      return;
+    }
+    if (!state.sourceBlob || !state.sourceDataUrl) {
+      showToast('Upload a photo before running the builder test.');
+      return;
+    }
+    if (!state.byok.hasCredentials) {
+      if (buildStatus) buildStatus.textContent = 'You need your Cloudflare key to run builder tests.';
+      window.dispatchEvent(new CustomEvent('gic:open-setup', { detail: { source: 'build-run-test' } }));
+      return;
+    }
+
+    state.isRunning = true;
+    state.didTimeout = false;
+    state.hasSuccessfulRun = false;
+    state.resultImages = [];
+    state.activeResultIndex = 0;
+    state.runController = new AbortController();
+    if (buildProgress) buildProgress.hidden = false;
+    updateProgress(buildProgress, 12);
+    if (buildStatus) buildStatus.textContent = 'Starting…';
+    if (cancelButton) cancelButton.hidden = true;
+    if (keepWaitingButton) keepWaitingButton.hidden = true;
+    if (retryButton) retryButton.hidden = true;
+    runButtons.forEach((button) => {
+      button.disabled = true;
+      button.textContent = 'Starting…';
+    });
+    scheduleRunMilestones();
+    renderResults();
+
+    try {
+      const images = [];
+      for (let index = 0; index < definition.variantCount; index += 1) {
+        if (state.runController.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        if (buildStatus) {
+          buildStatus.textContent = definition.variantCount > 1
+            ? `Running variant ${index + 1} of ${definition.variantCount}…`
+            : 'Running your custom filter…';
+        }
+        updateProgress(buildProgress, clamp(20 + (index * 40), 20, 80));
+        const result = await attemptApiTransform(previewFilter, state.sourceBlob, definition.strength, state.byok, {
+          customFilter: definition,
+          signal: state.runController.signal,
+        });
+        images.push(result.images[0]);
+        state.latestResultBlob = result.blob || state.latestResultBlob;
+      }
+      state.resultImages = images.filter(Boolean);
+      state.activeResultIndex = 0;
+      state.hasSuccessfulRun = state.resultImages.length > 0;
+      if (!state.hasSuccessfulRun) throw new Error('No result image was returned.');
+      addSessionNeurons(previewFilter.estimatedNeurons * state.resultImages.length);
+      if (state.byokHealth?.status === 'ok') {
+        const nextRemaining = Math.max(0, Number(state.byokHealth.neuronsRemaining || 0) - (previewFilter.estimatedNeurons * state.resultImages.length));
+        state.byokHealth = cacheByokHealth({
+          ...state.byokHealth,
+          neuronsRemaining: nextRemaining,
+          neuronsUsed: Number(state.byokHealth.neuronsUsed || 0) + (previewFilter.estimatedNeurons * state.resultImages.length),
+          testedAt: new Date().toISOString(),
+        }, state.byok);
+      }
+      updateProgress(buildProgress, 100);
+      if (buildStatus) buildStatus.textContent = 'Test complete. Compare the result, tweak your prompt, or share the custom link.';
+      track('builder_test_run', { model: definition.model, variants: definition.variantCount });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        if (buildStatus && !state.didTimeout) buildStatus.textContent = 'Test canceled. Your photo and settings are still here.';
+      } else {
+        const message = error?.message || 'Unable to run the custom filter right now.';
+        if (buildStatus) buildStatus.textContent = message;
+        showToast(message);
+        console.error(error);
+      }
+    } finally {
+      resetRunUi({ keepStatus: true, showRetry: state.didTimeout });
+      syncFormUi();
+    }
+  };
+
+  const syncSettingsState = async () => {
+    state.byok = loadByokSettings();
+    state.byokHealth = loadCachedByokHealth(state.byok);
+    syncFormUi();
+  };
+
+  promptInput?.addEventListener('input', (event) => {
+    state.prompt = String(event.target.value || '').slice(0, 500);
+    if (event.target.value !== state.prompt) event.target.value = state.prompt;
+    syncFormUi();
+  });
+  negativeInput?.addEventListener('input', (event) => {
+    state.negativePrompt = String(event.target.value || '').slice(0, 300);
+    if (event.target.value !== state.negativePrompt) event.target.value = state.negativePrompt;
+    syncFormUi();
+  });
+  nameInput?.addEventListener('input', (event) => {
+    state.name = String(event.target.value || '').slice(0, 40) || 'Custom Filter';
+    syncFormUi();
+  });
+  descriptionInput?.addEventListener('input', (event) => {
+    state.description = String(event.target.value || '').slice(0, 120);
+    if (event.target.value !== state.description) event.target.value = state.description;
+    syncFormUi();
+  });
+  categorySelect?.addEventListener('change', (event) => {
+    state.category = event.target.value;
+    syncFormUi();
+  });
+  tagsInput?.addEventListener('input', (event) => {
+    state.tags = String(event.target.value || '').slice(0, 160);
+    syncFormUi();
+  });
+  strengthInput?.addEventListener('input', (event) => {
+    state.strength = clamp(Number(event.target.value) || 0.65, 0.3, 1);
+    syncFormUi();
+  });
+  guidanceInput?.addEventListener('input', (event) => {
+    state.guidance = clamp(Number(event.target.value) || 7.5, 3, 15);
+    syncFormUi();
+  });
+  dimensionButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const [width, height] = (button.dataset.buildDimension || '768x768').split('x').map(Number);
+      state.width = width;
+      state.height = height;
+      syncFormUi();
+    });
+  });
+  variantButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      state.variantCount = Number(button.dataset.buildVariants) || 1;
+      syncFormUi();
+    });
+  });
+  uploadDropzone?.addEventListener('click', () => buildFileInput?.click());
+  buildFileInput?.addEventListener('change', async (event) => {
+    const [file] = event.target.files || [];
+    if (file) await applyUploadedFile(file);
+  });
+  buildCameraButton?.addEventListener('click', () => buildCameraInput?.click());
+  buildCameraInput?.addEventListener('change', async (event) => {
+    const [file] = event.target.files || [];
+    if (file) await applyUploadedFile(file);
+  });
+  ['dragenter', 'dragover'].forEach((eventName) => uploadDropzone?.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    uploadDropzone.dataset.dragging = 'true';
+  }));
+  ['dragleave', 'drop'].forEach((eventName) => uploadDropzone?.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    uploadDropzone.dataset.dragging = 'false';
+  }));
+  uploadDropzone?.addEventListener('drop', async (event) => {
+    const [file] = event.dataTransfer?.files || [];
+    if (file) await applyUploadedFile(file);
+  });
+  document.addEventListener('paste', async (event) => {
+    if (!document.body.matches('[data-page="build"]')) return;
+    const item = Array.from(event.clipboardData?.items || []).find((entry) => entry.type.startsWith('image/'));
+    if (!item) return;
+    const file = item.getAsFile();
+    if (file) {
+      await applyUploadedFile(file);
+      showToast('Pasted image added to the builder.');
+    }
+  });
+  runButtons.forEach((button) => button.addEventListener('click', runBuilderTest));
+  buildNoKeyCta?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('gic:open-setup', { detail: { source: 'build-no-key-banner' } }));
+  });
+  cancelButton?.addEventListener('click', () => state.runController?.abort());
+  keepWaitingButton?.addEventListener('click', () => {
+    if (cancelButton) cancelButton.hidden = true;
+    if (keepWaitingButton) keepWaitingButton.hidden = true;
+    if (buildStatus) buildStatus.textContent = 'Okay — keeping the request alive a little longer…';
+  });
+  retryButton?.addEventListener('click', runBuilderTest);
+  shuffleSuggestionsButton?.addEventListener('click', renderSuggestions);
+  copyShareButton?.addEventListener('click', async () => {
+    if (!state.hasSuccessfulRun) return;
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      showToast('Custom filter link copied.');
+    } catch {
+      showToast('Unable to copy the custom filter link.');
+    }
+  });
+  nativeShareButton?.addEventListener('click', async () => {
+    if (!state.hasSuccessfulRun) return;
+    const url = getShareUrl();
+    const title = `${state.name} · GIC Photo Filters`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text: `Try my custom filter on GIC Photo Filters: ${url}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        showToast('Custom filter link copied.');
+      }
+    } catch {
+      showToast('Sharing was cancelled.');
+    }
+  });
+  downloadButton?.addEventListener('click', () => {
+    const current = state.resultImages[state.activeResultIndex];
+    if (!current) return;
+    const link = document.createElement('a');
+    link.href = current;
+    link.download = `${slugify(state.name || 'custom-filter')}-${state.activeResultIndex + 1}.jpg`;
+    link.click();
+  });
+
+  window.addEventListener(BYOK_EVENTS.CHANGED, syncSettingsState);
+  window.addEventListener('gic:byok-health', (event) => {
+    state.byokHealth = event.detail || null;
+    syncFormUi();
+  });
+  window.addEventListener('gic:model-preference-changed', (event) => {
+    if (state.manualModelSelection) return;
+    const nextModel = event.detail?.model;
+    if (nextModel && nextModel !== 'default' && nextModel !== 'sd15-inpainting') {
+      state.model = nextModel;
+      syncFormUi();
+    }
+  });
+
+  if (promptInput) promptInput.value = state.prompt;
+  if (negativeInput) negativeInput.value = state.negativePrompt;
+  if (nameInput) nameInput.value = state.name;
+  if (descriptionInput) descriptionInput.value = state.description;
+  if (categorySelect) categorySelect.value = state.category;
+  if (tagsInput) tagsInput.value = state.tags;
+  if (strengthInput) strengthInput.value = String(state.strength);
+  if (guidanceInput) guidanceInput.value = String(state.guidance);
+  renderSuggestions();
+  syncFormUi();
+  if (buildStatus) buildStatus.textContent = 'Upload a photo, then run a live test through /api/transform.';
+  track('builder_view', { model: state.model });
 }
 
 function initStaticPage() {
@@ -2164,6 +3017,9 @@ async function initApp() {
       break;
     case 'browse':
       initBrowsePage();
+      break;
+    case 'build':
+      initBuildPage();
       break;
     case 'try':
       initTryPage();

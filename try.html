@@ -62,34 +62,40 @@
         </div>
         <div class="progress" id="try-progress" hidden><span></span></div>
         <p class="microcopy" id="try-status">Upload a clear face photo for the best result.</p>
-        <details class="detail-card byok-panel" id="byok-panel">
-          <summary>
-            <div>
-              <span class="panel-title">Use your own Cloudflare API key</span>
-              <p class="microcopy" id="byok-summary">Live transforms stay in your browser.</p>
-            </div>
-          </summary>
-          <div class="byok-panel__grid">
-            <div class="byok-panel__mode">
-              <button class="button-ghost" type="button" data-byok-mode="demo">Demo mode</button>
-              <button class="button-ghost" type="button" data-byok-mode="live">Live mode</button>
-            </div>
-            <label class="byok-panel__field">
-              <span>Cloudflare Account ID</span>
-              <input id="cf-account-id" type="text" autocomplete="off" placeholder="Find it in the Cloudflare dashboard → right sidebar" />
-            </label>
-            <label class="byok-panel__field">
-              <span>API Token</span>
-              <input id="cf-api-token" type="password" autocomplete="off" placeholder="Token with Workers AI · Run permission" />
-            </label>
-            <div class="byok-panel__actions">
-              <a class="button-link" href="/docs/cloudflare-setup.html" target="_blank" rel="noreferrer">Get your free API token →</a>
-              <button class="button-ghost" type="button" id="byok-clear-button">Clear credentials</button>
-            </div>
-            <p class="microcopy byok-panel__note" id="byok-session-usage">Session: 0 neurons used · Live mode pay-as-you-go</p>
-            <p class="microcopy byok-panel__note">Credentials live in <code>sessionStorage</code> and are never sent to our servers.</p>
+        <div class="notice byok-status-banner" id="byok-status-banner" role="status" aria-live="polite">
+          <div>
+            <strong id="byok-status-title">🔑 Using demo mode — checking your free transforms…</strong>
+            <p id="byok-status-detail">Add your free Cloudflare key for unlimited access. Credentials stay in this browser and travel only in HTTPS request headers.</p>
           </div>
-        </details>
+          <div class="byok-status-banner__actions">
+            <button class="button-ghost" id="byok-status-primary" type="button">Add your key →</button>
+            <button class="button-link" id="byok-status-setup" type="button">Set up in 2 minutes →</button>
+          </div>
+        </div>
+        <div class="detail-card byok-summary-card">
+          <div class="section-heading byok-summary-card__heading">
+            <div>
+              <span class="panel-title">Cloudflare settings now open in a modal</span>
+              <p class="microcopy" id="byok-summary">Use Settings to save your key, choose storage mode, test the connection, track usage, and pick your preferred model without leaving the page.</p>
+            </div>
+            <button class="button-ghost" id="byok-inline-settings" type="button">Open settings ⚙</button>
+          </div>
+          <div class="usage-grid">
+            <div class="kpi">
+              <strong>Storage</strong>
+              <p id="byok-storage-detail">Default: save credentials in this browser until you clear them.</p>
+            </div>
+            <div class="kpi">
+              <strong>Connection</strong>
+              <p id="byok-connection-status">No connection test yet.</p>
+            </div>
+            <div class="kpi">
+              <strong>Session usage</strong>
+              <p id="byok-session-usage">Session estimate: 0 neurons used · Per-run cost updates with the current filter.</p>
+            </div>
+          </div>
+          <p class="microcopy byok-panel__note">Credentials stay in this browser and are sent only to <code>/api/health</code> and <code>/api/transform</code> as HTTPS request headers. They are never stored server-side.</p>
+        </div>
         <div class="upload-actions">
           <button class="button" id="transform-button" type="button">Transform — FREE ✨</button>
           <button class="button-ghost" id="reset-photo-button" type="button">Try another photo</button>

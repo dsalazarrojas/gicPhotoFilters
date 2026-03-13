@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Build a custom filter · GIC Photo Filters</title>
+  <meta name="description" content="Design a custom prompt, choose a model, test it on your photo, and generate a shareable GIC Photo Filters link." />
+  <meta name="theme-color" content="#ec5b13" />
+  <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="canonical" id="canonical-link" href="https://photofilters.gic.mx/build.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="GIC Photo Filters" />
+  <meta property="og:title" content="Build a custom filter · GIC Photo Filters" />
+  <meta property="og:description" content="Design a custom prompt, choose a model, test it on your photo, and generate a shareable GIC Photo Filters link." />
+  <meta property="og:url" content="https://photofilters.gic.mx/build.html" />
+  <meta property="og:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Build a custom filter · GIC Photo Filters" />
+  <meta name="twitter:description" content="Design a custom prompt, choose a model, test it on your photo, and generate a shareable GIC Photo Filters link." />
+  <meta name="twitter:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
+  <link rel="stylesheet" href="/docs/assets/style.css" />
+  <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://photofilters.gic.mx", "logo": "https://photofilters.gic.mx/docs/assets/favicon.svg"}</script>
+  <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "Build a custom filter · GIC Photo Filters", "url": "https://photofilters.gic.mx/build.html", "description": "Design a custom prompt, choose a model, test it on your photo, and generate a shareable GIC Photo Filters link."}</script>
+  <script type="module" src="/docs/assets/site.mjs"></script>
+</head>
+<body data-page="build">
+  <div class="site-frame">
+    <header class="site-header" data-site-header></header>
+    <main>
+      <div class="section-shell">
+        <div id="build-notice"></div>
+
+        <section class="static-hero build-hero">
+          <span class="page-eyebrow">Custom builder</span>
+          <h1>Design your own photo filter</h1>
+          <p class="lead">Write a prompt, choose a model, test it on your own photo, and generate a shareable Try page link. The builder keeps your work intact while setup and settings open as overlays.</p>
+        </section>
+
+        <section class="section build-sections">
+          <article class="detail-card build-section" data-build-section="prompt" data-ready="false" data-complete="false">
+            <div class="build-section__header">
+              <div>
+                <span class="page-eyebrow">Section 1</span>
+                <h2>Write your prompt</h2>
+              </div>
+              <span class="badge" data-section-state>○ Incomplete</span>
+            </div>
+            <label class="byok-panel__field">
+              <span>Main prompt</span>
+              <textarea id="build-prompt" rows="5" maxlength="500" placeholder="Describe the style, mood, lighting, and medium you want to apply to the uploaded photo."></textarea>
+            </label>
+            <p class="microcopy" id="build-prompt-counter">0/500</p>
+            <details class="detail-card build-inline-panel">
+              <summary class="panel-title">Negative prompt</summary>
+              <label class="byok-panel__field">
+                <span>What should the AI avoid?</span>
+                <textarea id="build-negative-prompt" rows="3" maxlength="300" placeholder="blurry, low quality, extra limbs, distorted eyes"></textarea>
+              </label>
+              <p class="microcopy" id="build-negative-counter">0/300</p>
+            </details>
+            <details class="detail-card build-inline-panel" open>
+              <summary class="panel-title">Need inspiration?</summary>
+              <div class="section-heading build-inline-heading">
+                <p>These prompts are pulled from the live catalog so you can remix proven ideas instead of starting from zero.</p>
+                <button class="button-ghost" type="button" id="build-suggestions-shuffle">Shuffle prompts</button>
+              </div>
+              <div class="grid build-suggestions" id="build-suggestions"></div>
+            </details>
+            <details class="detail-card build-inline-panel">
+              <summary class="panel-title">Tips for great prompts</summary>
+              <div class="markdown-content">
+                <ul>
+                  <li>Describe the style, not the subject — the uploaded photo already supplies the subject.</li>
+                  <li>Add lighting, medium, camera, or era cues for more distinctive results.</li>
+                  <li>Use negative prompts to reduce blur, artifacts, and unwanted accessories.</li>
+                </ul>
+              </div>
+            </details>
+          </article>
+
+          <article class="detail-card build-section" data-build-section="model" data-ready="false" data-complete="false">
+            <div class="build-section__header">
+              <div>
+                <span class="page-eyebrow">Section 2</span>
+                <h2>Choose your model</h2>
+              </div>
+              <span class="badge" data-section-state>○ Incomplete</span>
+            </div>
+            <div class="build-model-grid" id="build-model-grid"></div>
+          </article>
+
+          <article class="detail-card build-section" data-build-section="params" data-ready="true" data-complete="true">
+            <div class="build-section__header">
+              <div>
+                <span class="page-eyebrow">Section 3</span>
+                <h2>Set parameters</h2>
+              </div>
+              <span class="badge" data-section-state>✓ Complete</span>
+            </div>
+            <div class="build-parameter-grid">
+              <label class="byok-panel__field">
+                <span>Strength · Subtle ← → Dramatic</span>
+                <input id="build-strength" type="range" min="0.3" max="1" step="0.05" value="0.65" />
+                <strong id="build-strength-value">0.65</strong>
+              </label>
+              <label class="byok-panel__field">
+                <span>Guidance · Creative ← → Faithful</span>
+                <input id="build-guidance" type="range" min="3" max="15" step="0.5" value="7.5" />
+                <strong id="build-guidance-value">7.5</strong>
+              </label>
+            </div>
+            <div class="build-toggle-group" role="group" aria-label="Output dimensions">
+              <button class="button-ghost" type="button" data-build-dimension="512x512">512×512</button>
+              <button class="button-ghost" type="button" data-build-dimension="768x768">768×768</button>
+              <button class="button-ghost" type="button" data-build-dimension="1024x1024">1024×1024</button>
+            </div>
+            <div class="build-toggle-group" role="group" aria-label="Variant count">
+              <button class="button-ghost" type="button" data-build-variants="1">1 result</button>
+              <button class="button-ghost" type="button" data-build-variants="2">2 results</button>
+            </div>
+          </article>
+
+          <article class="detail-card build-section" data-build-section="test" data-ready="false" data-complete="false">
+            <div class="build-section__header">
+              <div>
+                <span class="page-eyebrow">Section 4</span>
+                <h2>Test with a photo</h2>
+              </div>
+              <span class="badge" data-section-state>○ Incomplete</span>
+            </div>
+            <div class="notice build-no-key-banner" id="build-no-key-banner">
+              <div>
+                <strong>⚠️ You need a Cloudflare API key to run tests</strong>
+                <p>Demo mode doesn’t support the builder. Open the setup wizard without losing your prompt, photo, or scroll position.</p>
+              </div>
+              <button class="button" id="build-no-key-cta" type="button">Add your key — 2 minutes →</button>
+            </div>
+            <div class="upload-dropzone" id="build-upload-dropzone" role="button" tabindex="0" aria-describedby="build-upload-hint">
+              <strong>Drop a JPEG, PNG, or WebP photo here</strong>
+              <p id="build-upload-hint" class="microcopy">Drag &amp; drop, click to browse, or paste from the clipboard. Photos are resized client-side to 1024px for the test run.</p>
+              <input id="build-file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+              <span class="badge badge--brand">Live /api/transform test</span>
+            </div>
+            <input id="build-camera-input" type="file" accept="image/*" capture="environment" hidden />
+            <div class="upload-actions upload-actions--camera">
+              <button class="button-ghost" id="build-camera-button" type="button">Use camera</button>
+              <button class="button" type="button" data-build-run>Run Test ▶</button>
+              <button class="button-ghost" id="build-cancel-button" type="button" hidden>Cancel</button>
+              <button class="button-ghost" id="build-keep-waiting" type="button" hidden>Keep waiting</button>
+              <button class="button-ghost" id="build-retry-button" type="button" hidden>Retry</button>
+            </div>
+            <div class="progress" id="build-progress" hidden><span></span></div>
+            <p class="microcopy" id="build-status">Upload a photo, then run a live test through /api/transform.</p>
+            <div id="build-stage"></div>
+            <div class="variant-list" id="build-variant-list"></div>
+            <div class="upload-actions">
+              <button class="button-secondary" id="build-download-button" type="button" disabled>Download result</button>
+            </div>
+          </article>
+
+          <article class="detail-card build-section" data-build-section="name" data-ready="false" data-complete="false">
+            <div class="build-section__header">
+              <div>
+                <span class="page-eyebrow">Section 5</span>
+                <h2>Name and describe it</h2>
+              </div>
+              <span class="badge" data-section-state>○ Incomplete</span>
+            </div>
+            <div class="build-parameter-grid">
+              <label class="byok-panel__field">
+                <span>Filter name</span>
+                <input class="text-input" id="build-name" type="text" maxlength="40" value="Custom Filter" placeholder="Dreamy watercolor portrait" />
+              </label>
+              <label class="byok-panel__field">
+                <span>Category</span>
+                <select class="select-input" id="build-category"></select>
+              </label>
+            </div>
+            <label class="byok-panel__field">
+              <span>Short description</span>
+              <textarea id="build-description" rows="3" maxlength="120" placeholder="Tell people what vibe this filter creates."></textarea>
+            </label>
+            <p class="microcopy" id="build-description-counter">0/120</p>
+            <label class="byok-panel__field">
+              <span>Tags</span>
+              <input class="text-input" id="build-tags" type="text" placeholder="watercolor, pastel, soft light" />
+            </label>
+          </article>
+
+          <article class="detail-card build-section" data-build-section="share" data-ready="false" data-complete="false">
+            <div class="build-section__header">
+              <div>
+                <span class="page-eyebrow">Section 6</span>
+                <h2>Share your filter</h2>
+              </div>
+              <span class="badge" data-section-state>○ Incomplete</span>
+            </div>
+            <div id="build-details"></div>
+            <label class="byok-panel__field">
+              <span>Custom filter link</span>
+              <input class="text-input" id="build-share-url" type="text" readonly placeholder="Run a successful test to generate a shareable link." />
+            </label>
+            <div class="upload-actions">
+              <button class="button" id="build-copy-share" type="button" disabled>Copy link</button>
+              <button class="button-ghost" id="build-native-share" type="button" disabled>Share…</button>
+            </div>
+            <p class="microcopy" id="build-share-hint">Run a successful test first to generate a shareable result link.</p>
+          </article>
+        </section>
+      </div>
+    </main>
+    <footer class="site-footer" data-site-footer></footer>
+  </div>
+  <div class="build-sticky-bar" id="build-sticky-bar" hidden>
+    <div>
+      <strong>Ready to test your custom filter?</strong>
+      <p id="build-sticky-label">Write a prompt and pick a model to unlock Run Test.</p>
+    </div>
+    <button class="button" type="button" data-build-run>Run Test ▶</button>
+  </div>
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

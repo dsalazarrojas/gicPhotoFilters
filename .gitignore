@@ -2,3 +2,4 @@
 node_modules/
 .wrangler/
 .dev.vars
+docs/assets/filter-previews/.preview-state.json
