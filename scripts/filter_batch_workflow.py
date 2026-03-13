@@ -14,6 +14,7 @@ from filter_workflow_common import (
     DEFAULT_API_URL,
     find_item,
     generated_pair_dir,
+    is_runnable_preview_filter,
     is_supported_human_filter,
     load_manifest_filters,
     load_state,
@@ -123,6 +124,8 @@ def init_plan(limit: int | None = None) -> int:
     new_items: list[dict[str, Any]] = []
     for filter_def in load_manifest_filters():
         if not is_supported_human_filter(filter_def):
+            continue
+        if not is_runnable_preview_filter(filter_def):
             continue
         ranked = rank_images_for_filter(images, filter_def)
         fresh_item = build_initial_item(filter_def, ranked, attempt=1)

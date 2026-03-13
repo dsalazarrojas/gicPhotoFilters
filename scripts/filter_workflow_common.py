@@ -158,6 +158,14 @@ def is_supported_human_filter(filter_def: dict[str, Any]) -> bool:
     return True
 
 
+def is_runnable_preview_filter(filter_def: dict[str, Any]) -> bool:
+    model = str(filter_def.get("model") or "")
+    filter_type = str(filter_def.get("type") or "")
+    if filter_def.get("clientSideOnly") or filter_def.get("requiresAI") is False:
+        return False
+    return model in {"flux2-klein-9b", "flux2-klein-4b"} and filter_type == "img2img"
+
+
 def score_image_for_filter(image: ModelImage, filter_def: dict[str, Any]) -> int:
     text = " ".join(
         str(filter_def.get(field, ""))
