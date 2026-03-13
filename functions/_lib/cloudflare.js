@@ -163,10 +163,11 @@ export async function fetchCloudflareUsage({ accountId, apiToken }) {
 }
 
 export async function runCloudflareModel({ accountId, apiToken, modelId, input }) {
+  const normalizedModelId = String(modelId || "").replace(/^\/+/, "");
   let response;
   try {
     response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${encodeURIComponent(modelId)}`,
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${normalizedModelId}`,
       {
         method: "POST",
         headers: {

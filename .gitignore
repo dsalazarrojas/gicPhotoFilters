@@ -3,3 +3,6 @@ node_modules/
 .wrangler/
 .dev.vars
 docs/assets/filter-previews/.preview-state.json
+scripts/__pycache__/
+modelsAI/review/generated/
+modelsAI/review/work_items.json
