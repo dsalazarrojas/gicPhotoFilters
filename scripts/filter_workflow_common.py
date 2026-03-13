@@ -18,6 +18,8 @@ GENERATED_DIR = REVIEW_DIR / "generated"
 STATE_PATH = REVIEW_DIR / "work_items.json"
 MANIFEST_PATH = REPO_ROOT / "docs" / "filters-index.json"
 SITE_PREVIEWS_DIR = REPO_ROOT / "docs" / "assets" / "filter-previews"
+APP_REPO_ROOT = REPO_ROOT.parent / "gicPhotoFiltersApp" / "gicPhotoFilters"
+APP_MANIFEST_PATH = APP_REPO_ROOT / "GIC Photo Filters" / "FilterIndex.json"
 DEFAULT_API_URL = "https://photofilters.gic.mx/api/transform"
 
 
@@ -285,6 +287,35 @@ def optimize_preview_image(source: Path, destination: Path) -> None:
     )
 
 
+def update_manifest_preview(manifest_path: Path, filter_id: str, before_rel: str, after_rel: str) -> bool:
+    manifest = read_json(manifest_path, default=None)
+    if not manifest:
+        return False
+
+    filters = manifest.get("filters", [])
+    filter_entry = next((row for row in filters if row.get("id") == filter_id), None)
+    if not filter_entry:
+        return False
+
+    preview_images = list(filter_entry.get("previewImages") or [])
+    updated = False
+    for row in preview_images:
+        if row.get("before") == before_rel or row.get("after") == after_rel:
+            row["before"] = before_rel
+            row["after"] = after_rel
+            updated = True
+            break
+    if not updated:
+        preview_images.append({"before": before_rel, "after": after_rel})
+
+    first_preview = preview_images[0]
+    filter_entry["previewImages"] = preview_images
+    filter_entry["previewBefore"] = first_preview["before"]
+    filter_entry["previewAfter"] = first_preview["after"]
+    write_json(manifest_path, manifest)
+    return True
+
+
 def publish_item_to_site(item: dict[str, Any]) -> dict[str, str]:
     before_asset = item.get("beforeAsset")
     after_asset = item.get("afterAsset")
@@ -306,30 +337,15 @@ def publish_item_to_site(item: dict[str, Any]) -> dict[str, str]:
     before_rel = relative_to_repo(before_dest)
     after_rel = relative_to_repo(after_dest)
 
-    manifest = read_json(MANIFEST_PATH, default={"filters": []})
-    filters = manifest.get("filters", [])
-    filter_entry = next((row for row in filters if row.get("id") == item["filterId"]), None)
-    if not filter_entry:
+    if not update_manifest_preview(MANIFEST_PATH, item["filterId"], before_rel, after_rel):
         raise KeyError(f"Filter not found in manifest: {item['filterId']}")
 
-    preview_images = list(filter_entry.get("previewImages") or [])
-    updated = False
-    for row in preview_images:
-        if row.get("before") == before_rel or row.get("after") == after_rel:
-            row["before"] = before_rel
-            row["after"] = after_rel
-            updated = True
-            break
-    if not updated:
-        preview_images.append({"before": before_rel, "after": after_rel})
-
-    filter_entry["previewImages"] = preview_images
-    first_preview = preview_images[0]
-    filter_entry["previewBefore"] = first_preview["before"]
-    filter_entry["previewAfter"] = first_preview["after"]
-    write_json(MANIFEST_PATH, manifest)
+    app_manifest_synced = False
+    if APP_MANIFEST_PATH.exists():
+        app_manifest_synced = update_manifest_preview(APP_MANIFEST_PATH, item["filterId"], before_rel, after_rel)
 
     return {
         "before": before_rel,
         "after": after_rel,
+        "appManifestSynced": "true" if app_manifest_synced else "false",
     }
