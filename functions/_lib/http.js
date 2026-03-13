@@ -9,7 +9,7 @@ function buildCorsHeaders(request, methods) {
 
   return {
     "access-control-allow-origin": origin,
-    "access-control-allow-headers": "content-type, x-request-id",
+    "access-control-allow-headers": "content-type, x-request-id, x-cf-account-id, x-cf-api-token, x-replicate-token, x-fal-key",
     "access-control-allow-methods": methods,
     "access-control-max-age": "86400",
     vary: "Origin",

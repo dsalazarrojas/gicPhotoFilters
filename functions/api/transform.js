@@ -2,13 +2,47 @@ import { executeTransform, getEstimatedNeurons, resolveModelDefinition } from ".
 import { getConfig } from "../_lib/config.js";
 import { fail, ok, preflight, rawResponse } from "../_lib/http.js";
 import { ApiError } from "../_lib/errors.js";
-import { getFilterById } from "../_lib/manifest.js";
+import { getFilterById, loadManifest } from "../_lib/manifest.js";
 import { readTransformRequest } from "../_lib/request.js";
 import { getStoredImage, putImageObject } from "../_lib/storage.js";
 import { assertWithinUsageLimits, getUsageSnapshot, recordSuccessfulTransform, saveJobStatus } from "../_lib/usage.js";
 
 export function onRequestOptions(context) {
   return preflight(context.request, "POST,OPTIONS");
+}
+
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "custom-filter";
+}
+
+function buildCustomFilter(filterDefinition = {}) {
+  const category = String(filterDefinition.category || "artistic_styles").trim() || "artistic_styles";
+  const slug = slugify(filterDefinition.name || "Custom Filter");
+  return {
+    id: `custom_${slug}--${category}`,
+    slug,
+    name: filterDefinition.name || "Custom Filter",
+    category,
+    description: filterDefinition.description || "Custom prompt built on the website builder.",
+    type: filterDefinition.model === "sd15-inpainting" ? "inpainting" : "img2img",
+    model: filterDefinition.model,
+    prompt: filterDefinition.prompt,
+    negativePrompt: filterDefinition.negativePrompt || "",
+    strength: Number(filterDefinition.strength ?? 0.65),
+    guidance: Number(filterDefinition.guidance ?? 7.5),
+    outputWidth: Number(filterDefinition.width ?? 768),
+    outputHeight: Number(filterDefinition.height ?? 768),
+    variantCount: Number(filterDefinition.variantCount ?? 1),
+    requiresAI: true,
+    clientSideOnly: false,
+    isDemoFilter: false,
+    tags: Array.isArray(filterDefinition.tags) ? filterDefinition.tags : [],
+    shareText: "Try my custom filter on GIC Photo Filters:",
+  };
 }
 
 export async function onRequestPost(context) {
@@ -19,8 +53,25 @@ export async function onRequestPost(context) {
   try {
     const config = getConfig(context.env);
     const requestData = await readTransformRequest(context.request, config);
-    const loaded = await getFilterById(context, requestData.filterId);
-    if (config.demoMode && !loaded.filter.isDemoFilter && !loaded.filter.clientSideOnly && !requestData.apiKey) {
+    const loaded = requestData.customFilter
+      ? {
+          filter: buildCustomFilter(requestData.customFilter),
+          manifest: (await loadManifest(context)).manifest,
+        }
+      : await getFilterById(context, requestData.filterId);
+    const usingByok = Boolean(requestData.cloudflare);
+    if (config.demoMode && requestData.customFilter && !usingByok) {
+      throw new ApiError(
+        403,
+        "custom_filter_requires_byok",
+        "Custom filters on the public website require your Cloudflare credentials. Add your key in Settings, then run the builder or shared custom link again.",
+        {
+          demoMode: config.demoMode,
+          requiresByok: true,
+        },
+      );
+    }
+    if (config.demoMode && !loaded.filter.isDemoFilter && !loaded.filter.clientSideOnly && !usingByok) {
       throw new ApiError(
         403,
         "filter_requires_demo_or_byok",
@@ -31,7 +82,7 @@ export async function onRequestPost(context) {
         },
       );
     }
-    const usageSnapshot = await getUsageSnapshot(context, { filter: loaded.filter });
+    const usageSnapshot = usingByok ? null : await getUsageSnapshot(context, { filter: loaded.filter });
     const storageMode = config.storageMode;
 
     if (requestData.sourceImageKey && storageMode === "direct") {
@@ -60,7 +111,9 @@ export async function onRequestPost(context) {
 
     const estimatedNeurons = getEstimatedNeurons(loaded.filter, resolveModelDefinition(loaded.filter, loaded.manifest));
 
-    assertWithinUsageLimits(usageSnapshot, estimatedNeurons);
+    if (usageSnapshot) {
+      assertWithinUsageLimits(usageSnapshot, estimatedNeurons);
+    }
 
     shouldPersistJob = storageMode === "r2";
 
@@ -76,12 +129,14 @@ export async function onRequestPost(context) {
 
     const transformResult = await executeTransform(context, loaded.filter, loaded.manifest, requestData);
     if (storageMode === "direct") {
-      const usageAfter = await recordSuccessfulTransform(context, usageSnapshot, {
-        estimatedNeurons: transformResult.estimatedNeurons,
-        filterId: loaded.filter.id,
-        jobId: null,
-        resultKey: null,
-      });
+      const usageAfter = usageSnapshot
+        ? await recordSuccessfulTransform(context, usageSnapshot, {
+            estimatedNeurons: transformResult.estimatedNeurons,
+            filterId: loaded.filter.id,
+            jobId: null,
+            resultKey: null,
+          })
+        : null;
 
       return rawResponse(context.request, transformResult.imageBytes, {
         methods: "POST,OPTIONS",
@@ -89,12 +144,21 @@ export async function onRequestPost(context) {
           "content-type": transformResult.contentType,
           "content-length": String(transformResult.imageBytes.byteLength),
           "x-storage-mode": "direct",
+          "x-proxy-mode": transformResult.billingMode,
           "x-filter-id": loaded.filter.id,
-          "x-usage-limit": String(usageSnapshot.limit),
-          "x-usage-used": String(usageAfter.ipRecord.used),
-          "x-usage-remaining": String(Math.max(0, usageSnapshot.limit - usageAfter.ipRecord.used)),
-          "x-neurons-limit": String(usageSnapshot.config.maxFreeNeuronsPerDay),
-          "x-neurons-used": String(usageAfter.siteRecord.neuronsUsed),
+          ...(usageSnapshot && usageAfter
+            ? {
+                "x-usage-source": "demo",
+                "x-usage-limit": String(usageSnapshot.limit),
+                "x-usage-used": String(usageAfter.ipRecord.used),
+                "x-usage-remaining": String(Math.max(0, usageSnapshot.limit - usageAfter.ipRecord.used)),
+                "x-neurons-limit": String(usageSnapshot.config.maxFreeNeuronsPerDay),
+                "x-neurons-used": String(usageAfter.siteRecord.neuronsUsed),
+              }
+            : {
+                "x-usage-source": "cloudflare",
+                "x-neurons-estimated": String(transformResult.estimatedNeurons),
+              }),
         },
       });
     }
@@ -110,12 +174,14 @@ export async function onRequestPost(context) {
       },
     });
 
-    const usageAfter = await recordSuccessfulTransform(context, usageSnapshot, {
-      estimatedNeurons: transformResult.estimatedNeurons,
-      filterId: loaded.filter.id,
-      jobId,
-      resultKey: storedResult.key,
-    });
+    const usageAfter = usageSnapshot
+      ? await recordSuccessfulTransform(context, usageSnapshot, {
+          estimatedNeurons: transformResult.estimatedNeurons,
+          filterId: loaded.filter.id,
+          jobId,
+          resultKey: storedResult.key,
+        })
+      : null;
 
     const completedAt = new Date().toISOString();
     await saveJobStatus(context, jobId, {
@@ -130,12 +196,18 @@ export async function onRequestPost(context) {
         contentType: storedResult.contentType,
         expiresAt: storedResult.expiresAt,
       },
-      usage: {
-        used: usageAfter.ipRecord.used,
-        limit: usageSnapshot.limit,
-        neuronsUsed: usageAfter.siteRecord.neuronsUsed,
-        neuronsLimit: usageSnapshot.config.maxFreeNeuronsPerDay,
-      },
+      usage: usageSnapshot && usageAfter
+        ? {
+            source: "demo",
+            used: usageAfter.ipRecord.used,
+            limit: usageSnapshot.limit,
+            neuronsUsed: usageAfter.siteRecord.neuronsUsed,
+            neuronsLimit: usageSnapshot.config.maxFreeNeuronsPerDay,
+          }
+        : {
+            source: "cloudflare",
+            estimatedNeuronsForRun: transformResult.estimatedNeurons,
+          },
     });
 
     return ok(
@@ -158,14 +230,21 @@ export async function onRequestPost(context) {
           contentType: storedResult.contentType,
           expiresAt: storedResult.expiresAt,
         },
-        usage: {
-          used: usageAfter.ipRecord.used,
-          limit: usageSnapshot.limit,
-          remaining: Math.max(0, usageSnapshot.limit - usageAfter.ipRecord.used),
-          neuronsUsed: usageAfter.siteRecord.neuronsUsed,
-          neuronsLimit: usageSnapshot.config.maxFreeNeuronsPerDay,
-          estimatedNeuronsForRun: transformResult.estimatedNeurons,
-        },
+        proxyMode: transformResult.billingMode,
+        usage: usageSnapshot && usageAfter
+          ? {
+              source: "demo",
+              used: usageAfter.ipRecord.used,
+              limit: usageSnapshot.limit,
+              remaining: Math.max(0, usageSnapshot.limit - usageAfter.ipRecord.used),
+              neuronsUsed: usageAfter.siteRecord.neuronsUsed,
+              neuronsLimit: usageSnapshot.config.maxFreeNeuronsPerDay,
+              estimatedNeuronsForRun: transformResult.estimatedNeurons,
+            }
+          : {
+              source: "cloudflare",
+              estimatedNeuronsForRun: transformResult.estimatedNeurons,
+            },
       },
       { methods: "POST,OPTIONS" },
     );

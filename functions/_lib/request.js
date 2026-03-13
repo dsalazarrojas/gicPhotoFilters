@@ -1,3 +1,4 @@
+import { readCloudflareCredentials } from "./cloudflare.js";
 import { ApiError, assert } from "./errors.js";
 import { assertSafeObjectKey, assertSupportedImage, detectImageMimeType } from "./storage.js";
 
@@ -10,6 +11,77 @@ function normalizeString(value) {
     return "";
   }
   return value.trim();
+}
+
+function readObjectString(value, fieldName, { required = false, maxLength = 200, fallback = "" } = {}) {
+  const normalized = normalizeString(value);
+  if (!normalized) {
+    if (required) {
+      throw new ApiError(400, `${fieldName}_required`, `${fieldName} is required.`, { field: fieldName });
+    }
+    return fallback;
+  }
+
+  assert(normalized.length <= maxLength, 400, `${fieldName}_too_long`, `${fieldName} exceeds ${maxLength} characters.`, {
+    field: fieldName,
+    maxLength,
+  });
+  return normalized;
+}
+
+function readObjectNumber(value, fieldName, {
+  required = false,
+  min = Number.NEGATIVE_INFINITY,
+  max = Number.POSITIVE_INFINITY,
+  fallback = null,
+  allowedValues = null,
+} = {}) {
+  if (value === undefined || value === null || value === "") {
+    if (required) {
+      throw new ApiError(400, `${fieldName}_required`, `${fieldName} is required.`, { field: fieldName });
+    }
+    return fallback;
+  }
+
+  const number = Number(value);
+  assert(Number.isFinite(number), 400, `${fieldName}_invalid`, `${fieldName} must be a number.`, {
+    field: fieldName,
+    value,
+  });
+  if (allowedValues?.length) {
+    assert(allowedValues.includes(number), 400, `${fieldName}_invalid`, `${fieldName} must be one of ${allowedValues.join(", ")}.`, {
+      field: fieldName,
+      allowedValues,
+      value: number,
+    });
+  } else {
+    assert(number >= min && number <= max, 400, `${fieldName}_out_of_range`, `${fieldName} must be between ${min} and ${max}.`, {
+      field: fieldName,
+      min,
+      max,
+      value: number,
+    });
+  }
+  return number;
+}
+
+function readObjectTags(value, fieldName) {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => readObjectString(entry, fieldName, { required: false, maxLength: 24 }))
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((entry) => readObjectString(entry, fieldName, { required: false, maxLength: 24 }))
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  return [];
 }
 
 export async function parseRequestPayload(request) {
@@ -169,11 +241,48 @@ export async function readUploadRequest(request, config) {
   };
 }
 
+export function readCustomFilterField(payload) {
+  const raw = readStringField(payload, "customFilter", { required: false, maxLength: 12000 });
+  if (!raw) return null;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw new ApiError(400, "custom_filter_invalid_json", "customFilter must be valid JSON.", {
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  assert(parsed && typeof parsed === "object" && !Array.isArray(parsed), 400, "custom_filter_invalid", "customFilter must be a JSON object.");
+
+  const prompt = readObjectString(parsed.prompt, "prompt", { required: true, maxLength: 500 });
+  const model = readObjectString(parsed.model, "model", { required: true, maxLength: 100 });
+  assert(model !== "client-side", 400, "custom_model_invalid", "Custom filters must use an AI model.");
+
+  return {
+    name: readObjectString(parsed.name, "name", { required: false, maxLength: 60, fallback: "Custom Filter" }),
+    description: readObjectString(parsed.description, "description", { required: false, maxLength: 160, fallback: "" }),
+    category: readObjectString(parsed.category, "category", { required: false, maxLength: 80, fallback: "artistic_styles" }),
+    prompt,
+    negativePrompt: readObjectString(parsed.negativePrompt, "negativePrompt", { required: false, maxLength: 300, fallback: "" }),
+    model,
+    strength: readObjectNumber(parsed.strength, "strength", { required: false, min: 0.3, max: 1, fallback: 0.65 }),
+    guidance: readObjectNumber(parsed.guidance, "guidance", { required: false, min: 3, max: 15, fallback: 7.5 }),
+    width: readObjectNumber(parsed.width, "width", { required: false, allowedValues: [512, 768, 1024], fallback: 768 }),
+    height: readObjectNumber(parsed.height, "height", { required: false, allowedValues: [512, 768, 1024], fallback: 768 }),
+    variantCount: readObjectNumber(parsed.variantCount, "variantCount", { required: false, allowedValues: [1, 2], fallback: 1 }),
+    tags: readObjectTags(parsed.tags, "tags"),
+  };
+}
+
 export async function readTransformRequest(request, config) {
   const payload = await parseRequestPayload(request);
-  const filterId = readStringField(payload, "filterId", { required: true, maxLength: 200 });
-  const apiKey = readStringField(payload, "apiKey", { required: false, maxLength: 400 });
+  const customFilter = readCustomFilterField(payload);
+  const filterId = readStringField(payload, "filterId", { required: false, maxLength: 200 });
+  const legacyApiKey = readStringField(payload, "apiKey", { required: false, maxLength: 400 });
   const sourceImageKey = readStringField(payload, "sourceImageKey", { required: false, maxLength: 200 });
+  const cloudflare = readCloudflareCredentials(request, { optional: true });
   const hasInlineImage = payload.kind === "form" ? isBlobLike(readField(payload, "image")) : Boolean(payload.value?.image || payload.value?.imageBase64);
   assert(
     !(sourceImageKey && hasInlineImage),
@@ -188,9 +297,24 @@ export async function readTransformRequest(request, config) {
     assertSafeObjectKey(sourceImageKey, "sourceImageKey");
   }
 
+  assert(
+    filterId || customFilter,
+    400,
+    "filter_required",
+    'Provide either "filterId" or "customFilter" when calling /api/transform.',
+  );
+
+  assert(
+    !legacyApiKey,
+    400,
+    "api_key_body_not_supported",
+    "Send Cloudflare credentials with X-CF-Account-ID and X-CF-API-Token headers instead of the request body.",
+  );
+
   return {
     filterId,
-    apiKey,
+    customFilter,
+    cloudflare,
     sourceImageKey,
     image,
     mask,

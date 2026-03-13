@@ -1,3 +1,4 @@
+import { runCloudflareModel } from "./cloudflare.js";
 import { ApiError, assert, missingBindingError, notImplementedError } from "./errors.js";
 
 const BUILT_IN_MODELS = {
@@ -173,7 +174,7 @@ function extractImagePayload(result) {
     if (bytes?.byteLength) {
       return {
         bytes,
-        contentType: result?.contentType || result?.mimeType || result?.result?.contentType || "image/png",
+        contentType: result?.contentType || result?.content_type || result?.mimeType || result?.result?.contentType || result?.result?.content_type || "image/png",
       };
     }
   }
@@ -182,14 +183,6 @@ function extractImagePayload(result) {
 }
 
 export async function executeTransform(context, filter, manifest, requestData) {
-  if (requestData.apiKey) {
-    throw notImplementedError(
-      "user_api_key_mode_not_supported",
-      "User-supplied API keys are not proxied by this Pages backend. The app should call the user's Cloudflare account directly.",
-      { filterId: filter.id },
-    );
-  }
-
   const modelDefinition = resolveModelDefinition(filter, manifest);
   if (filter.clientSideOnly || filter.requiresAI === false || modelDefinition.id === "client-side") {
     throw new ApiError(409, "client_side_only_filter", "This filter must be applied on the client instead of the backend.", {
@@ -208,29 +201,47 @@ export async function executeTransform(context, filter, manifest, requestData) {
     );
   }
 
-  if (!context.env.AI || typeof context.env.AI.run !== "function") {
-    throw missingBindingError("AI", "executing Workers AI image transforms");
-  }
-
   const input = buildWorkersAiInput(filter, requestData);
+  let imagePayload;
 
-  let result;
-  try {
-    result = await context.env.AI.run(modelDefinition.id, input);
-  } catch (error) {
-    throw new ApiError(502, "workers_ai_failed", `Workers AI failed while running model "${modelDefinition.id}".`, {
-      filterId: filter.id,
+  if (requestData.cloudflare) {
+    const proxiedResult = await runCloudflareModel({
+      accountId: requestData.cloudflare.accountId,
+      apiToken: requestData.cloudflare.apiToken,
       modelId: modelDefinition.id,
-      cause: error instanceof Error ? error.message : String(error),
+      input,
     });
-  }
 
-  const imagePayload = extractImagePayload(result);
+    imagePayload = proxiedResult.bytes?.byteLength
+      ? {
+          bytes: proxiedResult.bytes,
+          contentType: proxiedResult.contentType || "image/png",
+        }
+      : extractImagePayload(proxiedResult.payload);
+  } else {
+    if (!context.env.AI || typeof context.env.AI.run !== "function") {
+      throw missingBindingError("AI", "executing Workers AI image transforms");
+    }
+
+    let result;
+    try {
+      result = await context.env.AI.run(modelDefinition.id, input);
+    } catch (error) {
+      throw new ApiError(502, "workers_ai_failed", `Workers AI failed while running model "${modelDefinition.id}".`, {
+        filterId: filter.id,
+        modelId: modelDefinition.id,
+        cause: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    imagePayload = extractImagePayload(result);
+  }
 
   return {
     imageBytes: imagePayload.bytes,
     contentType: imagePayload.contentType,
     estimatedNeurons: getEstimatedNeurons(filter, modelDefinition),
     modelDefinition,
+    billingMode: requestData.cloudflare ? "byok" : "demo",
   };
 }
