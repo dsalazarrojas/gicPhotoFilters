@@ -74,8 +74,40 @@ const FALLBACK_CATALOG = {
   generatedAt: '2026-03-12T00:00:00Z',
   totalFilters: CATEGORY_TOTAL,
   dailyFreeNeurons: 10000,
+  freeTransformsPerIp: 10,
+  starterTransforms: 10,
+  referralBonusTransforms: 5,
+  referralThreshold: 3,
+  starterBonusCapPerDay: 5,
+  cloudflareFreeDailyEstimate: 160,
+  byokPromptAfterSuccess: true,
+  embedAllowed: true,
+  challengeMode: true,
   starterCatalog: true,
   filtersReady: 6,
+  viralTags: {
+    'hero-mode': {
+      label: 'Superhero Reveal ⚡',
+      filters: ['cyberpunk-pulse'],
+      hero: 'Drop one selfie, get a hero poster, and send it back to the chat in seconds.',
+      active: true,
+      priority: 100,
+    },
+    'grinch-2026': {
+      label: 'Grinch Christmas Challenge 🎄',
+      filters: ['grinch-ify'],
+      hero: 'Everyone is turning themselves into a holiday character — join in one tap.',
+      active: true,
+      priority: 92,
+    },
+    'headshot-upgrade': {
+      label: 'Headshot Upgrade Sprint 💼',
+      filters: ['professional-headshot'],
+      hero: 'Upgrade a profile photo fast and get back to your day with a stronger first impression.',
+      active: true,
+      priority: 88,
+    },
+  },
   models: {
     'flux2-klein-9b': { id: '@cf/black-forest-labs/flux-2-klein-9b', name: 'FLUX.2 Klein 9B', neuronsPerRun: 150 },
     'flux2-klein-4b': { id: '@cf/black-forest-labs/flux-2-klein-4b', name: 'FLUX.2 Klein 4B', neuronsPerRun: 80 },
@@ -92,6 +124,7 @@ const FALLBACK_CATALOG = {
       model: 'flux2-klein-9b',
       variantCount: 2,
       isDemoFilter: true,
+      viralScore: 98,
       isSeasonalHighlight: true,
       seasonalMonths: [11, 12, 1],
       requiresAI: true,
@@ -111,6 +144,7 @@ const FALLBACK_CATALOG = {
       model: 'flux2-klein-9b',
       variantCount: 2,
       isDemoFilter: true,
+      viralScore: 90,
       requiresAI: true,
       clientSideOnly: false,
       estimatedNeurons: 120,
@@ -128,6 +162,7 @@ const FALLBACK_CATALOG = {
       model: 'flux2-klein-9b',
       variantCount: 3,
       isDemoFilter: true,
+      viralScore: 84,
       requiresAI: true,
       clientSideOnly: false,
       estimatedNeurons: 150,
@@ -145,6 +180,7 @@ const FALLBACK_CATALOG = {
       model: 'flux2-klein-9b',
       variantCount: 1,
       isDemoFilter: true,
+      viralScore: 65,
       requiresAI: true,
       clientSideOnly: false,
       estimatedNeurons: 120,
@@ -162,6 +198,7 @@ const FALLBACK_CATALOG = {
       model: 'client-side',
       variantCount: 1,
       isDemoFilter: true,
+      viralScore: 50,
       requiresAI: false,
       clientSideOnly: true,
       estimatedNeurons: 0,
@@ -179,6 +216,7 @@ const FALLBACK_CATALOG = {
       model: 'flux2-klein-9b',
       variantCount: 3,
       isDemoFilter: false,
+      viralScore: 100,
       requiresAI: true,
       clientSideOnly: false,
       estimatedNeurons: 180,
@@ -336,9 +374,27 @@ function buildTryHref(filter) {
   return `/try.html?id=${encodeURIComponent(filter?.id || '')}`;
 }
 
-function buildTryShareUrl(filter) {
+function buildReferralCode(filter) {
+  const basis = filter?.slug || filter?.id || filter?.name || 'gic';
+  return `${slugify(basis).slice(0, 26) || 'gic'}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+}
+
+function buildTryShareUrl(filter, options = {}) {
   const baseUrl = hasDom ? window.location.origin : SITE.baseUrl;
-  return `${baseUrl}${buildTryHref(filter)}`;
+  const url = new URL(buildTryHref(filter), baseUrl);
+  const referralCode = String(options.ref || '').trim();
+  const trendId = String(options.trend || '').trim();
+  const source = String(options.source || '').trim();
+  if (referralCode) url.searchParams.set('ref', referralCode);
+  if (trendId) url.searchParams.set('trend', trendId);
+  if (source) url.searchParams.set('src', source);
+  return url.toString();
+}
+
+function buildViralShareCopy(filter, options = {}) {
+  const trendLabel = String(options.trendLabel || '').trim();
+  const suffix = trendLabel ? ` Join ${trendLabel} next.` : ' Try it next.';
+  return `${filter?.shareText || `Made with ${SITE.name}:`} ${suffix}`.trim();
 }
 
 function normalizeSiteConfig(rawConfig = {}) {
@@ -431,6 +487,10 @@ function sortByPopularity(a, b) {
   return (b.popularityScore || 0) - (a.popularityScore || 0);
 }
 
+function sortByTrending(a, b) {
+  return (b.viralScore || 0) - (a.viralScore || 0) || sortByPopularity(a, b);
+}
+
 function makeDateOffset(index = 0) {
   const date = new Date(Date.UTC(2026, 2, 12));
   date.setDate(date.getDate() - index * 3);
@@ -462,6 +522,7 @@ function withDefaults(filter, index, models = {}, categoryMap = CATEGORY_MAP) {
   const estimatedNeurons = Number.isFinite(filter.estimatedNeurons) ? filter.estimatedNeurons : model.neuronsPerRun || 0;
   const tags = Array.isArray(filter.tags) ? filter.tags : [];
   const popularityScore = Number.isFinite(filter.popularityScore) ? filter.popularityScore : Math.max(30, 100 - index * 3);
+  const viralScore = Number.isFinite(filter.viralScore) ? filter.viralScore : 0;
   const publishedAt = filter.publishedAt || makeDateOffset(index);
   const searchText = (filter.searchText || [filter.name, filter.description, tags.join(' '), category.name, category.description, filter.type, modelKey]
     .filter(Boolean)
@@ -495,6 +556,7 @@ function withDefaults(filter, index, models = {}, categoryMap = CATEGORY_MAP) {
     estimatedNeurons,
     tags,
     popularityScore,
+    viralScore,
     publishedAt,
     searchText,
     previewBefore: filter.previewBefore || firstPreview?.before || generatePreviewData(filter, 'before'),
@@ -513,8 +575,18 @@ function normalizeCatalog(rawCatalog) {
     generatedAt: rawCatalog?.generatedAt || FALLBACK_CATALOG.generatedAt,
     totalFilters: Number(rawCatalog?.totalFilters || rawCatalog?.filters?.length || CATEGORY_TOTAL),
     dailyFreeNeurons: Number(rawCatalog?.dailyFreeNeurons || 10000),
+    freeTransformsPerIp: Number(rawCatalog?.freeTransformsPerIp || FALLBACK_CATALOG.freeTransformsPerIp || 10),
+    starterTransforms: Number(rawCatalog?.starterTransforms || FALLBACK_CATALOG.starterTransforms || 10),
+    referralBonusTransforms: Number(rawCatalog?.referralBonusTransforms || FALLBACK_CATALOG.referralBonusTransforms || 5),
+    referralThreshold: Number(rawCatalog?.referralThreshold || FALLBACK_CATALOG.referralThreshold || 3),
+    starterBonusCapPerDay: Number(rawCatalog?.starterBonusCapPerDay || FALLBACK_CATALOG.starterBonusCapPerDay || 5),
+    cloudflareFreeDailyEstimate: Number(rawCatalog?.cloudflareFreeDailyEstimate || FALLBACK_CATALOG.cloudflareFreeDailyEstimate || 160),
+    byokPromptAfterSuccess: rawCatalog?.byokPromptAfterSuccess ?? FALLBACK_CATALOG.byokPromptAfterSuccess ?? true,
+    embedAllowed: rawCatalog?.embedAllowed ?? FALLBACK_CATALOG.embedAllowed ?? true,
+    challengeMode: rawCatalog?.challengeMode ?? FALLBACK_CATALOG.challengeMode ?? true,
     starterCatalog: Boolean(rawCatalog?.starterCatalog),
     filtersReady: Number(rawCatalog?.filtersReady || rawCatalog?.filters?.length || rawCatalog?.totalFilters || filters.length),
+    viralTags: rawCatalog?.viralTags || FALLBACK_CATALOG.viralTags || {},
     categories,
     models,
     filters,
@@ -551,9 +623,14 @@ async function loadHealthSnapshot() {
   return healthSnapshotPromise;
 }
 
-async function loadDemoUsage(filterId = '') {
+async function loadDemoUsage(filterId = '', options = {}) {
   if (!hasDom) return null;
-  const query = filterId ? `?filterId=${encodeURIComponent(filterId)}` : '';
+  const queryParams = new URLSearchParams();
+  if (filterId) queryParams.set('filterId', filterId);
+  if (options.referralCode) queryParams.set('ref', options.referralCode);
+  if (options.trendId) queryParams.set('trend', options.trendId);
+  if (options.source) queryParams.set('src', options.source);
+  const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
   try {
     const response = await fetch(`/api/usage${query}`, { cache: 'no-store' });
     const payload = await response.json().catch(() => null);
@@ -646,6 +723,61 @@ function renderFilterCard(filter, options = {}) {
             data-share-text="${escapeHtml(shareText)}"
             data-filter-name="${escapeHtml(filter.name)}"
           >Publish</button>
+        </div>
+      </div>
+    </article>`;
+}
+
+function getActiveTrends(catalog) {
+  const filterMap = new Map(catalog.filters.flatMap((filter) => [[filter.slug, filter], [filter.id, filter]]));
+  return Object.entries(catalog.viralTags || {})
+    .map(([id, trend]) => {
+      const filterRefs = Array.isArray(trend?.filters) ? trend.filters.filter(Boolean) : [];
+      const filters = filterRefs.map((ref) => filterMap.get(ref)).filter(Boolean);
+      return {
+        id,
+        label: trend?.label || id,
+        hero: trend?.hero || filters[0]?.description || '',
+        active: Boolean(trend?.active),
+        priority: Number(trend?.priority || 0),
+        note: trend?.note || '',
+        filters,
+        primaryFilter: filters[0] || null,
+      };
+    })
+    .filter((trend) => trend.active && trend.primaryFilter)
+    .sort((a, b) => b.priority - a.priority || sortByTrending(a.primaryFilter, b.primaryFilter) || a.label.localeCompare(b.label));
+}
+
+function renderTrendCard(trend) {
+  const primaryFilter = trend.primaryFilter;
+  const joinHref = buildTryHref(primaryFilter);
+  return `
+    <article class="filter-card trend-card">
+      <a class="filter-card__media filter-card__media-link" href="${joinHref}" aria-label="Join ${escapeHtml(trend.label)}">
+        <img src="${primaryFilter.previewAfter}" alt="${escapeHtml(trend.label)} preview" loading="lazy" />
+        <img src="${primaryFilter.previewBefore}" alt="${escapeHtml(primaryFilter.name)} source preview" loading="lazy" />
+      </a>
+      <div class="filter-card__content">
+        <div class="filter-card__badges">
+          <span class="badge badge--brand">🔥 Trending</span>
+          <span class="badge">${trend.filters.length} filter${trend.filters.length === 1 ? '' : 's'}</span>
+          ${primaryFilter.isDemoFilter ? '<span class="badge badge--success">FREE starter try</span>' : ''}
+        </div>
+        <div class="trend-card__headline">
+          <h3>${escapeHtml(trend.label)}</h3>
+          <p class="filter-card__description">${escapeHtml(trend.hero)}</p>
+        </div>
+        <div class="trend-card__filters">
+          ${trend.filters.map((filter) => `<span class="badge">${escapeHtml(filter.name)}</span>`).join('')}
+        </div>
+        <div class="filter-card__meta">
+          <span class="meta-text">Start with ${escapeHtml(primaryFilter.name)}</span>
+          <span class="meta-text">${escapeHtml(primaryFilter.categoryMeta.emoji)} ${escapeHtml(primaryFilter.categoryDisplay)}</span>
+          <span class="meta-text">${primaryFilter.clientSideOnly ? 'Runs instantly in your browser' : 'Generates in a few seconds'}</span>
+        </div>
+        <div class="filter-card__actions">
+          <a class="button trend-card__cta" href="${joinHref}">Join ${escapeHtml(trend.label)} in 5 seconds →</a>
         </div>
       </div>
     </article>`;
@@ -781,12 +913,14 @@ function renderHeader(page) {
   const pageToHref = {
     build: '/build.html',
     browse: '/browse.html',
+    trends: '/trends.html',
     try: '/try.html',
     'category-index': '/categories/index.html',
     'category-detail': '/categories/index.html',
   };
   const currentHref = pageToHref[page] || '/';
   const navItems = [
+    ['Trends', '/trends.html'],
     ['Browse', '/browse.html'],
     ['Try', '/try.html'],
     ['Build', '/build.html'],
@@ -838,6 +972,7 @@ function renderFooter() {
         </div>
         <div class="footer-column">
           <strong>Explore</strong>
+          <a href="/trends.html">Trending now</a>
           <a href="/browse.html">Browse filters</a>
           <a href="/try.html">Try a filter</a>
           <a href="/build.html">Build a filter</a>
@@ -1026,14 +1161,19 @@ function renderUsageGrid(target, catalog, filter = null, usageSnapshot = null) {
   const usage = usageSnapshot || getUsageSnapshot();
   const used = Number(usage.used ?? usage.transformsUsed ?? 0);
   const limit = Number(usage.limit ?? 10);
+  const bonusLimit = Number(usage.referralBonusTransforms ?? usage.bonusTransforms ?? 0);
   const remainingFree = Number.isFinite(Number(usage.remaining)) ? Number(usage.remaining) : Math.max(0, limit - used);
   const neuronsUsed = Number(usage.neuronsUsed ?? 0);
   const neuronsLimit = Number(usage.neuronsLimit ?? catalog.dailyFreeNeurons);
   const remainingNeurons = Math.max(0, neuronsLimit - neuronsUsed);
   const currentCost = filter ? `${filter.estimatedNeurons} neurons / run` : 'Pick a filter to see per-run cost';
+  const referralLine = usage.referral
+    ? `Referral ${usage.referral.code || 'campaign'} · ${usage.referral.progress || 0}/${usage.referral.threshold || catalog.referralThreshold || 3}`
+    : `${catalog.referralThreshold || 3} friend referrals can unlock +${catalog.referralBonusTransforms || 5} runs`;
   target.innerHTML = `
-    ${renderKpi('Free demo runs today', `${used}/${limit}`, `${remainingFree} demo runs remaining`)}
+    ${renderKpi('Free demo runs today', `${used}/${limit}`, `${remainingFree} demo runs remaining${bonusLimit ? ` · +${bonusLimit} referral bonus` : ''}`)}
     ${renderKpi('Neuron budget', `${formatNumber(neuronsUsed)}/${formatNumber(neuronsLimit)}`, `${formatNumber(remainingNeurons)} neurons left`)}
+    ${renderKpi('Referral bonus', bonusLimit ? `+${bonusLimit} unlocked` : `+${catalog.referralBonusTransforms || 5} pending`, referralLine)}
     ${renderKpi('Current filter', filter ? escapeHtml(filter.name) : 'Choose a filter', currentCost)}
     ${renderKpi('Unlimited option', 'Companion app', 'Bring your own API key later for full access')}`;
 }
@@ -1132,6 +1272,8 @@ function matchesFilter(filter, state) {
 function sortFilters(filters, sort) {
   const sorted = [...filters];
   switch (sort) {
+    case 'trending':
+      return sorted.sort(sortByTrending);
     case 'alpha':
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
     case 'category':
@@ -1190,6 +1332,62 @@ function loadImage(url) {
     image.onerror = reject;
     image.src = url;
   });
+}
+
+async function createShareCollage({ beforeUrl, afterUrl, filterName, trendLabel = '', sourceLabel = '' }) {
+  const [beforeImage, afterImage] = await Promise.all([loadImage(beforeUrl), loadImage(afterUrl)]);
+  const width = 1200;
+  const height = 1200;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  const half = width / 2;
+  context.fillStyle = '#0f172a';
+  context.fillRect(0, 0, width, height);
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, half, height);
+
+  const drawCover = (image, x, y, drawWidth, drawHeight) => {
+    const scale = Math.max(drawWidth / image.width, drawHeight / image.height);
+    const targetWidth = image.width * scale;
+    const targetHeight = image.height * scale;
+    const offsetX = x + (drawWidth - targetWidth) / 2;
+    const offsetY = y + (drawHeight - targetHeight) / 2;
+    context.drawImage(image, offsetX, offsetY, targetWidth, targetHeight);
+  };
+
+  drawCover(beforeImage, 0, 0, half, height - 170);
+  drawCover(afterImage, half, 0, half, height - 170);
+  context.fillStyle = 'rgba(15,23,42,0.82)';
+  context.fillRect(0, height - 170, width, 170);
+  context.strokeStyle = 'rgba(255,255,255,0.26)';
+  context.lineWidth = 4;
+  context.beginPath();
+  context.moveTo(half, 24);
+  context.lineTo(half, height - 194);
+  context.stroke();
+  context.font = '700 42px Inter, Arial, sans-serif';
+  context.fillStyle = '#fff';
+  context.fillText(filterName || 'GIC Photo Filters', 38, height - 106);
+  context.font = '500 29px Inter, Arial, sans-serif';
+  const label = [trendLabel, sourceLabel].filter(Boolean).join(' · ') || 'Try it free on GIC Photo Filters';
+  context.fillText(label, 38, height - 58);
+  context.font = '700 26px Inter, Arial, sans-serif';
+  context.fillStyle = '#0f172a';
+  context.fillRect(34, 30, 188, 58);
+  context.fillStyle = '#fff';
+  context.fillText('BEFORE', 52, 69);
+  context.fillStyle = '#fff';
+  context.fillRect(width - 222, 30, 188, 58);
+  context.fillStyle = '#0f172a';
+  context.fillText('AFTER', width - 188, 69);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+  return {
+    blob,
+    dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+  };
 }
 
 async function resizeFile(file, maxDimension = 1024) {
@@ -1511,6 +1709,8 @@ async function initHomePage() {
   const categoryGrid = document.getElementById('category-grid');
   const popularGrid = document.getElementById('popular-grid');
   const heroFilterName = document.getElementById('hero-filter-name');
+  const trendCarousel = document.getElementById('home-trend-carousel');
+  const trendTemplateGrid = document.querySelector('[data-home-trend-templates]');
   renderSkeletonCards(seasonalGrid, 4);
   renderSkeletonCards(categoryGrid, 6);
   renderSkeletonCards(popularGrid, 4);
@@ -1542,6 +1742,18 @@ async function initHomePage() {
     return renderCategoryCard(category, actualCount);
   }).join('');
   popularGrid.innerHTML = sortFilters(catalog.filters, 'popular').slice(0, 8).map((filter) => renderFilterCard(filter, { compact: true })).join('');
+  if (trendCarousel) {
+    const trendCards = getActiveTrends(catalog).slice(0, 4);
+    trendCarousel.innerHTML = trendCards.length
+      ? trendCards.map((trend) => renderTrendCard(trend)).join('')
+      : '<p class="microcopy">No active trends right now.</p>';
+  }
+  if (trendTemplateGrid) {
+    trendTemplateGrid.innerHTML = sortFilters(catalog.filters, 'trending')
+      .slice(0, 4)
+      .map((filter) => `<a class="button-ghost" href="${buildTryHref(filter)}&embed=true">${escapeHtml(filter.name)} embed</a>`)
+      .join('');
+  }
   initBeforeAfterSliders();
   updateSchema({
     '@context': 'https://schema.org',
@@ -1673,6 +1885,80 @@ async function initBrowsePage() {
   });
 }
 
+async function initTrendsPage() {
+  const noticeTarget = document.getElementById('catalog-notice');
+  const grid = document.getElementById('trends-grid');
+  const meta = document.getElementById('trends-meta');
+  const lead = document.getElementById('trends-lead');
+  const heroActions = document.getElementById('trends-hero-actions');
+  const proof = document.getElementById('trend-proof');
+
+  renderSkeletonCards(grid, 3);
+  const [info, usage] = await Promise.all([loadCatalog(), loadDemoUsage()]);
+  const { catalog } = info;
+  const trends = getActiveTrends(catalog);
+  const topTrend = trends[0] || null;
+  const joinedToday = Number.isFinite(usage?.siteTransformsUsed) ? usage.siteTransformsUsed : null;
+
+  renderCatalogNotice(noticeTarget, info);
+
+  if (lead) {
+    lead.textContent = topTrend
+      ? topTrend.hero
+      : 'No trends are active right now. Check back soon, or browse the full catalog while the next challenge is queued up.';
+  }
+
+  if (heroActions) {
+    heroActions.innerHTML = topTrend
+      ? `<a class="button" href="${buildTryHref(topTrend.primaryFilter)}">Join ${escapeHtml(topTrend.label)} in 5 seconds →</a><a class="button-ghost" href="/browse.html">Browse all filters</a>`
+      : '<a class="button" href="/browse.html">Browse all filters</a>';
+  }
+
+  if (proof) {
+    proof.innerHTML = [
+      renderKpi(
+        'Joined today',
+        joinedToday === null ? 'Live counter unavailable' : `${formatNumber(joinedToday)} people`,
+        joinedToday === null ? 'The /api/usage counter did not respond, but active trends are still live.' : 'Based on today’s site-wide transform count.',
+      ),
+      renderKpi('Starter pack', `${catalog.starterTransforms} free tries`, 'Platform-funded before Cloudflare setup is required.'),
+      renderKpi('Referral bonus', `+${catalog.referralBonusTransforms} tries`, `${catalog.referralThreshold} friends unlock another free batch.`),
+    ].join('');
+  }
+
+  if (!trends.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <h3>No trends active</h3>
+        <p>Check back soon or browse all filters while the next challenge is being prepared in the shared catalog config.</p>
+        <div class="card-actions">
+          <a class="button" href="/browse.html">Browse all filters</a>
+        </div>
+      </div>`;
+    if (meta) {
+      meta.innerHTML = '<div><strong>0</strong> active trends · <span class="meta-text">Flip a <code>viralTags.*.active</code> flag to launch the next one.</span></div>';
+    }
+  } else {
+    grid.innerHTML = trends.map((trend) => renderTrendCard(trend)).join('');
+    if (meta) {
+      meta.innerHTML = `<div><strong>${trends.length}</strong> active trends · <span class="meta-text">Sorted by priority from the shared catalog config.</span></div>`;
+    }
+  }
+
+  updateMeta({
+    title: `Trending Now · ${SITE.name}`,
+    description: topTrend?.hero || 'Join the active photo filter trends on GIC Photo Filters.',
+    canonicalPath: '/trends.html',
+  });
+  updateSchema({
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `Trending Now · ${SITE.name}`,
+    url: `${SITE.baseUrl}/trends.html`,
+    description: topTrend?.hero || 'Join the active photo filter trends on GIC Photo Filters.',
+  });
+}
+
 async function initCategoryIndexPage() {
   const noticeTarget = document.getElementById('catalog-notice');
   const grid = document.getElementById('category-index-grid');
@@ -1780,12 +2066,28 @@ async function initTryPage() {
   const byokStatusSetup = document.getElementById('byok-status-setup');
   const byokInlineSettings = document.getElementById('byok-inline-settings');
   const cameraButton = document.getElementById('camera-button');
+  const entryBanner = document.getElementById('try-entry-banner');
+  const trendShortcuts = document.getElementById('try-trend-shortcuts');
+  const shareOverlay = document.getElementById('share-overlay');
+  const shareOverlayTitle = document.getElementById('share-overlay-title');
+  const shareOverlayCopy = document.getElementById('share-overlay-copy');
+  const shareOverlayPreview = document.getElementById('share-overlay-preview');
+  const shareOverlayNative = document.getElementById('share-overlay-native');
+  const shareOverlayCopyButton = document.getElementById('share-overlay-copy');
+  const shareOverlayCopyImage = document.getElementById('share-overlay-copy-image');
   const params = new URLSearchParams(window.location.search);
   const requestedId = params.get('id');
   const requestedCustom = params.get('custom');
+  const requestedTrend = params.get('trend');
+  const referralCode = params.get('ref');
+  const referralSource = params.get('src') || params.get('source');
+  const embedMode = params.get('embed') === 'true';
+  document.body.dataset.embed = embedMode ? 'true' : 'false';
 
   const info = await loadCatalog();
   const { catalog } = info;
+  const activeTrends = getActiveTrends(catalog);
+  const requestedTrendEntry = activeTrends.find((entry) => entry.id === requestedTrend) || null;
   const health = await loadHealthSnapshot();
   let requestedCustomFilter = null;
   let requestedCustomError = '';
@@ -1813,7 +2115,15 @@ async function initTryPage() {
   const state = {
     catalog,
     health,
-    filter: requestedCustomFilter || catalog.filters.find((item) => item.id === requestedId) || sortFilters(catalog.filters, 'popular')[0],
+    trend: requestedTrendEntry,
+    referralCode: referralCode || '',
+    referralSource: referralSource || (requestedTrendEntry ? 'trend-link' : ''),
+    embedMode,
+    filter: requestedCustomFilter
+      || catalog.filters.find((item) => item.id === requestedId)
+      || requestedTrendEntry?.primaryFilter
+      || activeTrends[0]?.primaryFilter
+      || sortFilters(catalog.filters, 'popular')[0],
     sourceDataUrl: '',
     sourceBlob: null,
     variants: [],
@@ -1825,9 +2135,17 @@ async function initTryPage() {
     byok: loadByokSettings(),
     byokHealth: loadCachedByokHealth(loadByokSettings()),
     byokHealthError: '',
-    demoUsage: await loadDemoUsage(requestedCustomFilter ? '' : (requestedId || '')),
+    demoUsage: await loadDemoUsage(
+      requestedCustomFilter ? '' : (requestedId || requestedTrendEntry?.primaryFilter?.id || ''),
+      {
+        referralCode: referralCode || '',
+        trendId: requestedTrendEntry?.id || requestedTrend || '',
+        source: referralSource || '',
+      },
+    ),
     helpHtml: '',
     customLinkError: requestedCustomError,
+    shareContext: null,
   };
 
   const buildHealthMessage = (remaining) => `Connected — ${formatNumber(Math.max(0, Number(remaining) || 0))} neurons available today.`;
@@ -1852,6 +2170,65 @@ async function initTryPage() {
       ? `Session estimate: ${formatNumber(used)} neurons used · ${cost}`
       : `Session estimate: 0 neurons used · ${cost}`;
     byokSessionUsage.textContent = label;
+  };
+
+  const showEntryBanner = () => {
+    if (!entryBanner) return;
+    if (state.trend) {
+      entryBanner.classList.remove('hidden');
+      entryBanner.innerHTML = `
+        <div>
+          <strong>🔥 Trend shortcut active: ${escapeHtml(state.trend.label)}</strong>
+          <p>${escapeHtml(state.trend.hero || 'Start with this filter and share your result in one tap.')}</p>
+        </div>`;
+      return;
+    }
+    if (state.referralCode) {
+      entryBanner.classList.remove('hidden');
+      entryBanner.innerHTML = `
+        <div>
+          <strong>🎁 Referral link detected</strong>
+          <p>Your starter usage may include bonus tries once this session syncs.</p>
+        </div>`;
+      return;
+    }
+    entryBanner.classList.add('hidden');
+  };
+
+  const renderTrendShortcuts = () => {
+    if (!trendShortcuts || embedMode) return;
+    const topTrends = activeTrends.slice(0, 3);
+    if (!topTrends.length) {
+      trendShortcuts.classList.add('hidden');
+      return;
+    }
+    trendShortcuts.classList.remove('hidden');
+    trendShortcuts.innerHTML = `
+      <div>
+        <strong>Trending quick-start</strong>
+        <p class="microcopy">Jump straight into an active challenge and pre-fill the share path.</p>
+      </div>
+      <div class="try-trend-shortcuts__actions">
+        ${topTrends.map((trend) => `
+          <a class="button-ghost" href="${buildTryHref(trend.primaryFilter)}&trend=${encodeURIComponent(trend.id)}${state.referralCode ? `&ref=${encodeURIComponent(state.referralCode)}` : ''}">${escapeHtml(trend.label)}</a>`).join('')}
+      </div>`;
+  };
+
+  const buildShareContext = () => {
+    const trendLabel = state.trend?.label || '';
+    const referral = state.referralCode || buildReferralCode(state.filter);
+    const shareUrl = buildTryShareUrl(state.filter, {
+      ref: referral,
+      trend: state.trend?.id || '',
+      source: state.referralSource || 'try-share',
+    });
+    const copyLead = buildViralShareCopy(state.filter, { trendLabel });
+    return {
+      referral,
+      trendLabel,
+      shareUrl,
+      shareText: `${copyLead} ${shareUrl}`.trim(),
+    };
   };
 
   const renderByokStatusBanner = () => {
@@ -2004,8 +2381,16 @@ async function initTryPage() {
   };
 
   const refreshDemoUsage = async (filterId = state.filter?.id) => {
-    const usage = await loadDemoUsage(state.filter?.customDefinition ? '' : filterId);
-    if (usage) state.demoUsage = usage;
+    const usage = await loadDemoUsage(state.filter?.customDefinition ? '' : filterId, {
+      referralCode: state.referralCode,
+      trendId: state.trend?.id || requestedTrend || '',
+      source: state.referralSource || 'try-page',
+    });
+    if (usage) {
+      state.demoUsage = usage;
+      if (!state.referralCode && usage.referral?.code) state.referralCode = usage.referral.code;
+    }
+    showEntryBanner();
     renderUsageGrid(usageGrid, catalog, state.filter, state.demoUsage);
     renderByokStatusBanner();
     return state.demoUsage;
@@ -2043,8 +2428,19 @@ async function initTryPage() {
     const isCustomFilter = Boolean(filter?.customDefinition);
     const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly;
     const related = sortFilters(catalog.filters.filter((item) => item.category === filter.category && item.id !== filter.id), 'popular').slice(0, 6);
-    trySelectionTitle.textContent = isCustomFilter ? 'Switch to catalog filters' : requestedId ? 'Switch filters' : 'Popular filters to start';
-    selection.innerHTML = createSelectionMarkup(sortFilters(catalog.filters, 'popular').slice(0, 6));
+    trySelectionTitle.textContent = isCustomFilter
+      ? 'Switch to catalog filters'
+      : state.trend
+        ? `${state.trend.label} starters`
+        : requestedId ? 'Switch filters' : 'Popular filters to start';
+    const selectionPool = state.trend?.filters?.length
+      ? state.trend.filters
+      : sortFilters(catalog.filters, 'popular');
+    selection.innerHTML = createSelectionMarkup(selectionPool.slice(0, 6));
+    if (embedMode) {
+      relatedGrid.closest('.section')?.classList.add('hidden');
+      if (noticeTarget) noticeTarget.classList.add('hidden');
+    }
     breadcrumb.innerHTML = `
       <a href="/index.html">Home</a>
       <span>→</span>
@@ -2102,7 +2498,9 @@ async function initTryPage() {
       ? 'Your Cloudflare key is ready. Upload a photo to run it through the secure proxy.'
       : isCustomFilter && Boolean(state.health?.limits?.demoMode)
         ? 'This shared custom filter needs your Cloudflare key on the public website.'
-        : 'Upload a clear face photo for the best result.';
+        : state.trend
+          ? `Trend mode active: ${state.trend.label}. Upload a clear photo and transform it to join in.`
+          : 'Upload a clear face photo for the best result.';
   };
 
   const renderResult = () => {
@@ -2138,6 +2536,43 @@ async function initTryPage() {
     stageNote.innerHTML = getStageBadge(filter);
     if (shareResultButton) shareResultButton.disabled = !state.variants.length;
     if (shareFilterButton) shareFilterButton.disabled = false;
+  };
+
+  const openShareOverlay = async () => {
+    if (!shareOverlay || !state.filter) return;
+    const current = state.variants[state.activeVariantIndex];
+    if (!current) return;
+    const shareContext = buildShareContext();
+    state.shareContext = shareContext;
+    if (shareOverlayTitle) shareOverlayTitle.textContent = `Your ${state.filter.name} result is ready`;
+    if (shareOverlayCopy) {
+      shareOverlayCopy.textContent = shareContext.trendLabel
+        ? `Use this caption to invite friends into ${shareContext.trendLabel}.`
+        : 'Use this caption to post your before/after result.';
+    }
+    try {
+      const collage = await createShareCollage({
+        beforeUrl: state.sourceDataUrl,
+        afterUrl: current,
+        filterName: state.filter.name,
+        trendLabel: shareContext.trendLabel,
+        sourceLabel: 'GIC Photo Filters',
+      });
+      if (shareOverlayPreview) {
+        shareOverlayPreview.innerHTML = `<img src="${collage.dataUrl}" alt="${escapeHtml(state.filter.name)} before and after collage" />`;
+      }
+      state.latestResultBlob = collage.blob || state.latestResultBlob;
+    } catch {
+      if (shareOverlayPreview) {
+        shareOverlayPreview.innerHTML = renderBeforeAfter({
+          beforeUrl: state.sourceDataUrl,
+          afterUrl: current,
+          beforeLabel: 'Original',
+          afterLabel: state.filter.name,
+        });
+      }
+    }
+    if (typeof shareOverlay.showModal === 'function') shareOverlay.showModal();
   };
 
   const setSource = async (file) => {
@@ -2308,13 +2743,26 @@ async function initTryPage() {
       const successMessage = result.warningMessage
         ? result.warningMessage
         : result.requestMode === 'cloudflare'
-          ? 'Transform complete through your Cloudflare key. Save or share the result.'
+          ? 'Transform complete through your Cloudflare key. Open share to post your before/after.'
           : result.mode === 'api'
             ? result.storageMode === 'direct'
-              ? 'Transform complete. Save the image now or share the filter link while direct mode is active.'
-              : 'Transform complete. Download or share the result.'
+              ? 'Transform complete. Open share now to publish your result and referral link.'
+              : 'Transform complete. Open share to post your result.'
             : 'Preview ready. The UI kept working even though the live AI result was unavailable.';
       status.textContent = successMessage;
+      if (!result.warningMessage) {
+        window.setTimeout(() => {
+          openShareOverlay();
+        }, 260);
+      }
+      if (!state.byok.hasCredentials && catalog.byokPromptAfterSuccess && result.mode === 'api') {
+        window.setTimeout(() => {
+          if (!state.byok.hasCredentials && byokStatusTitle && byokStatusDetail) {
+            byokStatusTitle.textContent = '⚡ Nice result. Want unlimited runs?';
+            byokStatusDetail.textContent = 'Add your Cloudflare key now to keep transforming without demo caps.';
+          }
+        }, 1600);
+      }
       track('filter_transform', { filterId: state.filter.id, mode: result.mode });
     } catch (error) {
       const message = error?.message || 'The transform shell hit an error. Try a different photo or filter.';
@@ -2339,20 +2787,43 @@ async function initTryPage() {
     track('filter_download', { filterId: state.filter.id });
   });
 
-  shareFilterButton?.addEventListener('click', async () => {
-    const url = buildTryShareUrl(state.filter);
-    const text = `${state.filter.shareText} ${url}`;
+  const runShareFlow = async ({ includeImage = false } = {}) => {
+    if (!state.filter) return false;
+    const shareContext = state.shareContext || buildShareContext();
+    state.shareContext = shareContext;
+    const current = state.variants[state.activeVariantIndex];
+    let shareFile = null;
+    if (includeImage && current) {
+      const blob = state.latestResultBlob || await fetch(current).then((response) => response.blob());
+      shareFile = new File([blob], `${state.filter.slug || 'gic-photo-filter'}-share.jpg`, {
+        type: blob.type || 'image/jpeg',
+      });
+    }
     try {
       if (navigator.share) {
-        await navigator.share({ title: state.filter.name, text, url });
+        if (shareFile && navigator.canShare?.({ files: [shareFile] })) {
+          await navigator.share({ title: `${state.filter.name} · ${SITE.name}`, text: shareContext.shareText, files: [shareFile], url: shareContext.shareUrl });
+        } else {
+          await navigator.share({ title: `${state.filter.name} · ${SITE.name}`, text: shareContext.shareText, url: shareContext.shareUrl });
+        }
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareContext.shareText);
+        showToast('Share caption + link copied to your clipboard.');
       } else {
-        await navigator.clipboard.writeText(text);
-        showToast('Share text copied to your clipboard.');
+        showToast('Sharing is not available in this browser.');
+        return false;
       }
-      track('filter_share', { filterId: state.filter.id });
+      return true;
     } catch {
       showToast('Sharing was cancelled.');
+      return false;
     }
+  };
+
+  shareFilterButton?.addEventListener('click', async () => {
+    state.shareContext = buildShareContext();
+    const shared = await runShareFlow();
+    if (shared) track('filter_share', { filterId: state.filter.id, source: 'try-filter' });
   });
 
   shareResultButton?.addEventListener('click', async () => {
@@ -2362,30 +2833,32 @@ async function initTryPage() {
       showToast('Run a transform before sharing a result.');
       return;
     }
-    const shareUrl = buildTryShareUrl(state.filter);
-    const shareText = `${state.filter.shareText} ${shareUrl}`;
+    await openShareOverlay();
+    track('filter_share_result_open', { filterId: state.filter.id, mode: state.outputMode || 'preview' });
+  });
+
+  shareOverlayNative?.addEventListener('click', async () => {
+    const shared = await runShareFlow({ includeImage: true });
+    if (shared) track('filter_share_result', { filterId: state.filter?.id || '', mode: state.outputMode || 'preview', channel: 'native' });
+  });
+  shareOverlayCopyButton?.addEventListener('click', async () => {
+    const shareContext = state.shareContext || buildShareContext();
     try {
-      if (navigator.share) {
-        const blob = await fetch(current).then((response) => response.blob());
-        const file = new File([blob], `${state.filter.slug || 'gic-photo-filter'}-${state.activeVariantIndex + 1}.jpg`, {
-          type: blob.type || 'image/jpeg',
-        });
-        const canShareFile = navigator.canShare?.({ files: [file] });
-        if (canShareFile) {
-          await navigator.share({ title: state.filter.name, text: shareText, files: [file] });
-        } else {
-          await navigator.share({ title: state.filter.name, text: shareText, url: current });
-        }
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(current);
-        showToast('Result link copied to your clipboard.');
-      } else {
-        showToast('Sharing is not available in this browser.');
-      }
-      track('filter_share_result', { filterId: state.filter.id, mode: state.outputMode || 'preview' });
-    } catch (error) {
-      showToast('Result sharing was cancelled.');
-      console.error(error);
+      await navigator.clipboard.writeText(shareContext.shareText);
+      showToast('Caption + referral link copied.');
+      track('filter_share_result', { filterId: state.filter?.id || '', mode: state.outputMode || 'preview', channel: 'copy' });
+    } catch {
+      showToast('Unable to copy share text.');
+    }
+  });
+  shareOverlayCopyImage?.addEventListener('click', async () => {
+    const current = state.variants[state.activeVariantIndex];
+    if (!current) return;
+    try {
+      await navigator.clipboard.writeText(current);
+      showToast('Result image link copied.');
+    } catch {
+      showToast('Unable to copy image link.');
     }
   });
 
@@ -2404,6 +2877,12 @@ async function initTryPage() {
     });
   });
 
+  showEntryBanner();
+  renderTrendShortcuts();
+  if (embedMode) {
+    resultActions?.classList.remove('hidden');
+    resetButton?.classList.add('hidden');
+  }
   updateByokPanelUi();
   updateTransformButtonLabel();
   await setSummary();
@@ -2455,6 +2934,7 @@ async function initBuildPage() {
   const categorySelect = document.getElementById('build-category');
   const tagsInput = document.getElementById('build-tags');
   const shareInput = document.getElementById('build-share-url');
+  const embedInput = document.getElementById('build-embed-code');
   const copyShareButton = document.getElementById('build-copy-share');
   const nativeShareButton = document.getElementById('build-native-share');
   const shareHint = document.getElementById('build-share-hint');
@@ -2682,7 +3162,13 @@ async function initBuildPage() {
           <li>Tags: ${escapeHtml(definition.tags.join(', ') || 'None')}</li>
         </ul>
       </div>`;
-    if (shareInput) shareInput.value = state.hasSuccessfulRun ? getShareUrl() : '';
+    const shareUrl = state.hasSuccessfulRun ? getShareUrl() : '';
+    if (shareInput) shareInput.value = shareUrl;
+    if (embedInput) {
+      embedInput.value = shareUrl
+        ? `<iframe src="${shareUrl}&embed=true" loading="lazy" style="width:100%;max-width:720px;aspect-ratio:4/5;border:0;border-radius:16px;" title="${escapeHtml(definition.name)}"></iframe>`
+        : '';
+    }
   };
 
   const syncFormUi = () => {
@@ -2706,7 +3192,7 @@ async function initBuildPage() {
     if (buildNoKeyBanner) buildNoKeyBanner.hidden = state.byok.hasCredentials;
     if (shareHint) {
       shareHint.textContent = state.hasSuccessfulRun
-        ? 'Anyone with this link can load your filter on the Try page. They may still need their own Cloudflare key depending on the deployment.'
+        ? 'Anyone with this link can load your filter on the Try page. Use embed mode for lightweight website previews.'
         : 'Run a successful test first to generate a shareable result link.';
     }
     if (copyShareButton) copyShareButton.disabled = !state.hasSuccessfulRun;
@@ -3048,6 +3534,9 @@ async function initApp() {
   switch (page) {
     case 'home':
       initHomePage();
+      break;
+    case 'trends':
+      initTrendsPage();
       break;
     case 'browse':
       initBrowsePage();

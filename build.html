@@ -36,6 +36,32 @@
           <p class="lead">Write a prompt, choose a model, test it on your own photo, and generate a shareable Try page link. The builder keeps your work intact while setup and settings open as overlays.</p>
         </section>
 
+        <section class="section">
+          <div class="section-heading">
+            <div>
+              <span class="page-eyebrow">Trend templates</span>
+              <h2>Start from a viral launch format</h2>
+            </div>
+            <p>Pick a template to prefill copy and framing, then customize it in the builder flow below.</p>
+          </div>
+          <div class="build-toggle-group" id="build-trend-template-buttons" data-build-trend-template-buttons role="group" aria-label="Trend template quick picks">
+            <button class="button-ghost" type="button" data-build-template="family-faceoff">Family Faceoff</button>
+            <button class="button-ghost" type="button" data-build-template="friends-reaction">Friends Reaction</button>
+            <button class="button-ghost" type="button" data-build-template="before-after-reveal">Before/After Reveal</button>
+          </div>
+          <div class="catalog-grid" id="build-trend-template-cards" data-build-trend-template-cards aria-live="polite">
+            <article class="filter-card">
+              <div class="filter-card__body">
+                <div class="filter-card__meta">
+                  <span class="badge">Template hook</span>
+                </div>
+                <h3>Live trend templates will load here</h3>
+                <p class="filter-card__description">Runtime hydration will replace this placeholder with ranked template cards and one-click apply actions.</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section class="section build-sections">
           <article class="detail-card build-section" data-build-section="prompt" data-ready="false" data-complete="false">
             <div class="build-section__header">
@@ -196,6 +222,25 @@
               <span class="badge" data-section-state>○ Incomplete</span>
             </div>
             <div id="build-details"></div>
+            <div class="detail-card build-inline-panel" id="build-embed-panel" data-build-embed-panel>
+              <div class="section-heading build-inline-heading">
+                <div>
+                  <span class="page-eyebrow">Embed</span>
+                  <h3>Generate iframe code</h3>
+                </div>
+                <p>Available after a successful live builder test.</p>
+              </div>
+              <label class="byok-panel__field">
+                <span>Iframe snippet</span>
+                <textarea id="build-embed-code" rows="4" readonly placeholder="Run a successful test to generate iframe embed code."></textarea>
+              </label>
+              <div class="upload-actions">
+                <button class="button-ghost" id="build-copy-embed" type="button" disabled>Copy iframe code</button>
+              </div>
+              <div class="detail-card" id="build-embed-preview" data-build-embed-preview aria-live="polite">
+                <p class="microcopy">Embed preview placeholder. Runtime will render a live iframe card here.</p>
+              </div>
+            </div>
             <label class="byok-panel__field">
               <span>Custom filter link</span>
               <input class="text-input" id="build-share-url" type="text" readonly placeholder="Run a successful test to generate a shareable link." />

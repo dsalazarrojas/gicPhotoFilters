@@ -34,9 +34,10 @@
     <div id="try-filter-summary"></div>
   </section>
 
-  <section class="section">
-    <div class="try-layout">
-      <aside class="upload-panel">
+      <section class="section">
+        <div class="try-layout">
+          <aside class="upload-panel">
+        <div class="notice try-entry-banner hidden" id="try-entry-banner" role="status" aria-live="polite"></div>
         <div class="section-heading">
           <div>
             <span class="page-eyebrow">Filter selection</span>
@@ -44,6 +45,7 @@
           </div>
           <a class="button-link" href="/browse.html">Browse full shell</a>
         </div>
+        <div class="detail-card try-trend-shortcuts hidden" id="try-trend-shortcuts"></div>
         <div class="selection-grid" id="try-selection"></div>
         <div class="upload-dropzone" id="upload-dropzone" role="button" tabindex="0" aria-describedby="upload-hint">
           <strong>Drop a JPEG, PNG, or WebP here</strong>
@@ -114,7 +116,7 @@
           <div class="upload-actions hidden" id="result-actions">
             <button class="button-secondary" id="download-button" type="button">Download result</button>
             <button class="button-ghost" id="share-filter-button" type="button">Share filter</button>
-            <button class="button" id="share-result-button" type="button" disabled>Share result</button>
+            <button class="button" id="share-result-button" type="button" disabled>Share result + collage</button>
           </div>
         </section>
 
@@ -148,5 +150,21 @@
         <footer class="site-footer" data-site-footer></footer>
       </div>
       <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+      <dialog class="share-overlay" id="share-overlay">
+        <form method="dialog" class="share-overlay__dialog">
+          <button class="button-ghost share-overlay__close" type="submit" aria-label="Close share overlay">✕</button>
+          <div class="share-overlay__body">
+            <span class="page-eyebrow">Share your result</span>
+            <h2 id="share-overlay-title">Your transformation is ready</h2>
+            <p class="microcopy" id="share-overlay-copy">Use one tap to post, or copy the viral text and link.</p>
+            <div class="share-overlay__preview" id="share-overlay-preview"></div>
+            <div class="share-overlay__actions">
+              <button class="button" id="share-overlay-native" type="button">Share now</button>
+              <button class="button-secondary" id="share-overlay-copy" type="button">Copy caption + link</button>
+              <button class="button-ghost" id="share-overlay-copy-image" type="button">Copy image link</button>
+            </div>
+          </div>
+        </form>
+      </dialog>
     </body>
     </html>

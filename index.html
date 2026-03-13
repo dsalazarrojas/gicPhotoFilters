@@ -3,24 +3,24 @@
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>GIC Photo Filters · 200+ fun photo filters</title>
-      <meta name="description" content="Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters." />
+      <title>GIC Photo Filters · Launch today’s trend challenge</title>
+      <meta name="description" content="Pick a live trend template, upload one photo, and share a family challenge link in seconds." />
       <meta name="theme-color" content="#ec5b13" />
       <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
       <link rel="canonical" id="canonical-link" href="https://photofilters.gic.mx/index.html" />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="GIC Photo Filters" />
-      <meta property="og:title" content="GIC Photo Filters · 200+ fun photo filters" />
-      <meta property="og:description" content="Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters." />
+      <meta property="og:title" content="GIC Photo Filters · Launch today’s trend challenge" />
+      <meta property="og:description" content="Pick a live trend template, upload one photo, and share a family challenge link in seconds." />
       <meta property="og:url" content="https://photofilters.gic.mx/index.html" />
       <meta property="og:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content="GIC Photo Filters · 200+ fun photo filters" />
-      <meta name="twitter:description" content="Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters." />
+      <meta name="twitter:title" content="GIC Photo Filters · Launch today’s trend challenge" />
+      <meta name="twitter:description" content="Pick a live trend template, upload one photo, and share a family challenge link in seconds." />
       <meta name="twitter:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
       <link rel="stylesheet" href="/docs/assets/style.css" />
       <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://photofilters.gic.mx", "logo": "https://photofilters.gic.mx/docs/assets/favicon.svg"}</script>
-      <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "GIC Photo Filters \u00b7 200+ fun photo filters", "url": "https://photofilters.gic.mx/index.html", "description": "Browse 200+ planned photo filters, explore seasonal highlights, and try the Cloudflare Pages starter shell for gicPhotoFilters."}</script>
+      <script type="application/ld+json" id="page-schema">{"@context": "https://schema.org", "@type": "WebPage", "name": "GIC Photo Filters · Launch today’s trend challenge", "url": "https://photofilters.gic.mx/index.html", "description": "Pick a live trend template, upload one photo, and share a family challenge link in seconds."}</script>
       <script type="module" src="/docs/assets/site.mjs"></script>
     </head>
     <body data-page="home">
@@ -29,29 +29,31 @@
         <main>
           <div class="section-shell">
   <div id="catalog-notice"></div>
-  <section class="section hero">
+  <section class="section hero" id="home-trend-launcher" data-trend-launcher>
     <div class="glass-panel hero-copy">
-      <span class="page-eyebrow">AI-powered photo transformations</span>
+      <span class="page-eyebrow">Trend launcher</span>
       <div>
-        <h1>200+ Fun Photo Filters — Transform Yourself in Seconds</h1>
-        <p class="lead">Turn into the Grinch, travel to Paris, get a professional headshot, or remix your next social post from one photo. This starter Cloudflare Pages shell is wired for browse, try, search, and category landing pages.</p>
+        <h1>Launch today’s photo trend in under 5 seconds</h1>
+        <p class="lead">Choose a live template, drop in a selfie, and publish a ready-to-share challenge link for friends and family.</p>
       </div>
-      <div class="hero-actions">
-        <a class="button" href="/try.html">Try a Filter</a>
-        <a class="button-secondary" href="/browse.html">Browse the Catalog</a>
-        <a class="button-ghost" href="/about.html#app-availability">Get the App</a>
+      <div class="hero-actions" id="home-primary-cta" data-home-primary-cta>
+        <a class="button" id="home-primary-cta-button" href="/trends.html">Join a trend now</a>
+        <a class="button-secondary" href="/try.html">Try with your own photo</a>
+        <a class="button-ghost" href="/build.html">Build a challenge template</a>
       </div>
-      <div class="hero-stats" id="hero-stats"></div>
+      <div class="usage-grid trend-proof" id="home-social-proof" aria-live="polite">
+        <div class="hero-stats" id="hero-stats"></div>
+      </div>
     </div>
     <div class="glass-panel hero-visual">
       <div class="section-heading">
         <div>
-          <span class="page-eyebrow">Filter of the season</span>
-          <h2 id="hero-filter-name">Loading…</h2>
+          <span class="page-eyebrow">Featured challenge</span>
+          <h2 id="hero-filter-name">Loading trend…</h2>
         </div>
-        <a class="button-link" href="/browse.html#seasonal=true">See seasonal highlights</a>
+        <a class="button-link" href="/trends.html">See all live trends</a>
       </div>
-      <div id="season-showcase"></div>
+      <div id="season-showcase" data-trend-featured></div>
     </div>
   </section>
 
@@ -59,26 +61,27 @@
     <div class="section-heading">
       <div>
         <span class="page-eyebrow">How it works</span>
-        <h2>Upload, pick, share</h2>
+        <h2>Pick, post, challenge</h2>
       </div>
-      <p>PRD-aligned flow: drag in a photo, choose from the searchable catalog, preview the transform, then download or share the result.</p>
+      <p>Three viral steps: choose a trend template, transform one photo, then send your challenge link to friends and family.</p>
     </div>
     <div class="step-grid">
-      <article class="step-card"><div class="step-card__index">1</div><h3>Upload your photo</h3><p>Drag and drop, browse the photo library, or paste directly from the clipboard. The shell resizes images client-side to keep uploads lightweight.</p></article>
-      <article class="step-card"><div class="step-card__index">2</div><h3>Pick a filter</h3><p>Browse category pages, search by tags, or open a specific filter from the curated starter catalog. Filter metadata lives at <code>/docs/filters-index.json</code>.</p></article>
-      <article class="step-card"><div class="step-card__index">3</div><h3>Download &amp; share</h3><p>Use the result slider, switch between variants, copy share text, and preview the free-usage dashboard before backend wiring is complete.</p></article>
+      <article class="step-card"><div class="step-card__index">1</div><h3>Pick today’s template</h3><p>Start from the live trend carousel and choose the challenge format you want to launch.</p></article>
+      <article class="step-card"><div class="step-card__index">2</div><h3>Upload one photo</h3><p>Drop in a selfie or portrait, let the transform run, and keep the look aligned with the selected trend.</p></article>
+      <article class="step-card"><div class="step-card__index">3</div><h3>Share the challenge</h3><p>Copy your link and invite family or friends to create their own version and post it back.</p></article>
     </div>
   </section>
 
-  <section class="section">
+  <section class="section" id="home-trend-carousel">
     <div class="section-heading">
       <div>
-        <span class="page-eyebrow">Seasonal highlights</span>
-        <h2>Dynamic cards powered by the catalog manifest</h2>
+        <span class="page-eyebrow">Trend carousel</span>
+        <h2>Live templates everyone is launching right now</h2>
       </div>
-      <p>These cards pull from the current month’s <code>seasonalMonths</code> values, with a curated fallback when the full manifest is still being assembled.</p>
+      <p>Runtime hooks will hydrate this lane with active trend cards, swipe controls, and priority ordering from the shared catalog config.</p>
     </div>
-    <div class="catalog-grid" id="seasonal-grid"></div>
+    <p class="microcopy" id="home-trend-counter" aria-live="polite">Loading live trend count…</p>
+    <div class="catalog-grid trend-grid" id="seasonal-grid" data-trend-carousel></div>
   </section>
 
   <section class="section">
@@ -103,44 +106,44 @@
     <div class="catalog-grid" id="popular-grid"></div>
   </section>
 
-  <section class="section">
-    <div class="app-card" id="app-availability">
+  <section class="section" id="family-challenge">
+    <div class="app-card" id="home-family-challenge" data-family-challenge>
       <div class="section-heading">
         <div>
-          <span class="page-eyebrow">Companion app</span>
-          <h2>Web-first shell, app-ready positioning</h2>
+          <span class="page-eyebrow">Family challenge</span>
+          <h2>Weekend-ready prompts for parents, siblings, and friend groups</h2>
         </div>
-        <a class="button-secondary" href="/about.html#app-availability">See the app roadmap</a>
+        <a class="button-secondary" href="/trends.html">Open the challenge feed</a>
       </div>
-      <div class="static-grid">
+      <div class="static-grid" id="home-family-challenge-cards" aria-live="polite">
         <div class="detail-card">
-          <h3>Free web demos</h3>
-          <p>Use the browser for discovery, dark-mode browsing, and fast demo transforms with daily free usage indicators.</p>
+          <h3>Sibling remix</h3>
+          <p>Everyone uses the same trend template, then votes on the funniest result in the group chat.</p>
         </div>
         <div class="detail-card">
-          <h3>Bring your own key later</h3>
-          <p>The UX already makes room for “Get the app” and “uses your API key” messaging without fabricating backend credentials.</p>
+          <h3>Parents vs. kids</h3>
+          <p>Run one style with two generations and post side-by-side outcomes as a mini challenge thread.</p>
         </div>
         <div class="detail-card">
-          <h3>Shared catalog source</h3>
-          <p>The companion app can point at the same manifest path once the full generated catalog replaces the starter data.</p>
+          <h3>Family reunion board</h3>
+          <p>Collect everyone’s versions in one challenge link so new relatives can join without setup friction.</p>
         </div>
       </div>
     </div>
   </section>
 
   <section class="section">
-    <div class="cta-band card">
+    <div class="cta-band card" id="home-primary-cta-band" data-primary-cta-band>
       <div class="section-heading">
         <div>
-          <span class="page-eyebrow">Ready to test the shell?</span>
-          <h2>Upload a photo, pick a filter, share the fun</h2>
+          <span class="page-eyebrow">Ready to launch your challenge?</span>
+          <h2>Start with a trend template and invite the group</h2>
         </div>
-        <p>The static foundation is ready for Cloudflare Pages deployment, catalog iteration, and future worker integration.</p>
+        <p>Use the trends feed for instant participation or open Builder to publish your own branded challenge format.</p>
       </div>
       <div class="button-row">
-        <a class="button" href="/try.html">Open the Try page</a>
-        <a class="button-ghost" href="/categories/index.html">Explore all categories</a>
+        <a class="button" href="/trends.html">Join a live trend</a>
+        <a class="button-ghost" href="/build.html">Create a custom challenge</a>
       </div>
     </div>
   </section>

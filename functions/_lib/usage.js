@@ -5,6 +5,11 @@ function cloneValue(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function toSafeInteger(value, fallback = 0) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export function getDateKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
@@ -66,13 +71,17 @@ export async function getUsageSnapshot(context, { filter } = {}) {
   const config = getConfig(context.env);
   const dateKey = getDateKey();
   const ip = getClientIp(context.request);
-  const limit = getEffectiveTransformLimit(config, filter);
+  const baseLimit = getEffectiveTransformLimit(config, filter);
 
   const ipRecord = await getJson(kv, usageKey(ip, dateKey), {
     dateKey,
     used: 0,
-    limit,
+    limit: baseLimit,
+    baseLimit,
+    bonusTransforms: 0,
     neuronsUsed: 0,
+    referralCode: null,
+    referralBonusUpdatedAt: null,
     updatedAt: null,
   });
 
@@ -84,6 +93,9 @@ export async function getUsageSnapshot(context, { filter } = {}) {
     updatedAt: null,
   });
 
+  const bonusTransforms = Math.max(0, toSafeInteger(ipRecord.bonusTransforms, 0));
+  const limit = baseLimit + bonusTransforms;
+
   return {
     ip,
     dateKey,
@@ -92,8 +104,12 @@ export async function getUsageSnapshot(context, { filter } = {}) {
     ttlSeconds: secondsUntilReset(),
     config,
     limit,
+    baseLimit,
+    bonusTransforms,
     ipRecord: {
       ...ipRecord,
+      baseLimit,
+      bonusTransforms,
       limit,
     },
     siteRecord: {

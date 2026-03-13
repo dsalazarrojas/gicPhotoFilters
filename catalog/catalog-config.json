@@ -4,6 +4,14 @@
   "sourceDate": "2026-03-11",
   "dailyFreeNeurons": 10000,
   "freeTransformsPerIp": 10,
+  "starterTransforms": 10,
+  "referralBonusTransforms": 5,
+  "referralThreshold": 3,
+  "starterBonusCapPerDay": 5,
+  "cloudflareFreeDailyEstimate": 160,
+  "byokPromptAfterSuccess": true,
+  "embedAllowed": true,
+  "challengeMode": true,
   "categoryDescriptions": {
     "holiday_seasonal": "Holiday costumes, cultural celebrations, and weather-inspired seasonal looks.",
     "pop_culture": "Characters, archetypes, and fandom-inspired persona transforms.",
@@ -72,6 +80,45 @@
     "thermal-infrared",
     "neon-glow"
   ],
+  "viralTags": {
+    "anime-challenge": {
+      "label": "Anime Portrait Wave 🌸",
+      "filters": ["anime-portrait"],
+      "hero": "Turn yourself into anime — the trend your group chat needs.",
+      "active": true,
+      "priority": 100
+    },
+    "hero-mode": {
+      "label": "Superhero Reveal ⚡",
+      "filters": ["superhero", "cyberpunk-runner"],
+      "hero": "Drop one selfie, get a hero poster, and send it back to the chat in seconds.",
+      "active": true,
+      "priority": 96
+    },
+    "headshot-upgrade": {
+      "label": "Headshot Upgrade Sprint 💼",
+      "filters": ["professional-headshot"],
+      "hero": "Everyone needs a sharper profile photo — upgrade yours before your next post or meeting.",
+      "active": true,
+      "priority": 90
+    },
+    "grinch-2026": {
+      "label": "Grinch Christmas Challenge 🎄",
+      "filters": ["grinch-ify", "elf-workshop", "ugly-christmas-sweater"],
+      "hero": "Everyone's turning into the Grinch this Christmas — join your family in 1 tap.",
+      "active": false,
+      "priority": 88,
+      "note": "Ready to reactivate when the holiday push starts."
+    },
+    "simpsons-meme": {
+      "label": "Simpsons-ify Yourself 💛",
+      "filters": [],
+      "hero": "Springfield is calling — see yourself as a Simpsons character.",
+      "active": false,
+      "priority": 84,
+      "note": "Filter not yet built; create via builder."
+    }
+  },
   "seasonalMonthsBySlug": {
     "grinch-ify": [11, 12],
     "santa-claus": [11, 12],

@@ -7,3 +7,23 @@ scripts/__pycache__/
 catalog/__pycache__/
 modelsAI/review/generated/
 modelsAI/review/work_items.json
+
+# Model AI test images and scripts
+modelsAI/*.jpg
+modelsAI/*.png
+modelsAI/*.webp
+modelsAI/middle_aged_woman_40s
+modelsAI/older_man_60s
+modelsAI/senior_woman_70s
+modelsAI/teenage_boy_15
+modelsAI/young_child_6
+modelsAI/young_woman_20s.jpg
+modelsAI/generate_test_persons.py
+
+# Working documentation drafts (keep main PRD.md tracked)
+PRD20*.md
+PRDViral.md
+status*.txt
+
+# Claude config
+.claude/

@@ -1,1093 +1,806 @@
-# PRD — gicPhotoFilters.gic.mx
+# PRD — Sprint: March 12, 2026
 
-**Product:** AI Photo Filters & Transformations Showcase Site  
-**Domain:** `gicPhotoFilters.gic.mx`  
-**Repository:** `gicPhotoFilters` (Cloudflare Pages, same pattern as `forms` and `onePageApps`)  
-**Companion App:** `gicPhotoFiltersApp` (iOS/macOS SwiftUI app)  
-**Date:** March 11, 2026  
-
----
-
-## 1. Executive Summary
-
-Build a static site at `gicPhotoFilters.gic.mx` that showcases, lets users try, and distributes **200+ AI-powered photo transformation "mini-apps"** (fun filters, serious tools, seasonal themes). Each mini-app is a single-purpose Cloudflare Worker that takes a user's photo + a baked-in prompt and returns a transformed image via **Cloudflare Workers AI** (FLUX, Stable Diffusion img2img, inpainting) or external providers (Replicate/fal.ai via AI Gateway).
-
-The site replicates the proven architecture of `forms.gic.mx` and `onePageApps.gic.mx`:
-
-- **`gicPhotoFilters` repo** hosts the filter definitions (prompt manifests, worker scripts, help docs) organized by category folders.
-- **Cloudflare Pages** serves the static site: homepage, browse page, live-try page, category SEO pages.
-- **`filters-index.json`** is the central manifest the site reads (and the iOS app downloads).
-- **`gicPhotoFiltersApp`** (iOS/macOS) fetches `filters-index.json` from the site to sync its filter gallery, exactly as `gicFormsForCloudflare` does with `forms-index.json`.
-
-**Key differentiator:** Users upload a photo and get transformed results **in-browser** — no app install, no API key needed for demo filters. The site provides GIC's own API key for a curated set of "demo" and "seasonal" filters, while the app lets users bring their own keys for unlimited use.
+**Product:** GIC Photo Filters (Site + iOS App)
+**Builds on:** `PRD202603121254.md` (original spec) and `PRD202603121557.md` (remaining-work tracker)
+**Reference app:** `gicFormsForCloudflare` (card-based Settings, setup wizard, ExpandableKeyField, entitlements)
+**Date:** March 12, 2026
+**Revised:** March 12, 2026 — security architecture, onboarding wizard, UX decisions
 
 ---
 
-## 2. Architecture Comparison: forms.gic.mx → gicPhotoFilters.gic.mx
+## Scope of This PRD
 
-| Aspect | forms.gic.mx | onePageApps.gic.mx | gicPhotoFilters.gic.mx |
+This document covers **seven work streams** that must land before anything else in the backlog:
+
+| # | Stream | Why |
+|---|--------|-----|
+| S0 | Website + App — Cloudflare Setup Wizard | New users cannot use BYOK without step-by-step guidance; wizard is required before any BYOK feature is useful |
+| S1 | iOS App — Sandbox / Networking Entitlements Fix | App cannot make any network request on macOS; crashes with `networkd_settings_read_from_file` sandbox denial |
+| S2 | iOS App — Card-Based Settings Redesign | Settings is still a plain `Form`; must match `gicFormsForCloudflare` quality |
+| S3 | iOS App — 401/429 Error Messages & Before/After Previews | Missing categorized error handling and visual previews |
+| S4 | Website — Bring Your Own Key (BYOK) Settings Dialog | Users need a full settings panel to enter keys, see neuron balance, and understand demo limits |
+| S5 | Website + App — Custom Filter Builder (Design & Test Your Own Prompt) | The *centerpiece* feature: users design a prompt, pick a model, test it on a photo, and share the result |
+| S6 | Before/After Sample Photos — Generate AI Portrait + Preview Script | Create 1 base portrait, generate 1 before/after per filter in daily batches using the free neuron allotment |
+
+---
+
+## S0 — Cloudflare Setup Wizard (Website + App)
+
+### Problem
+
+All BYOK features — custom filter building, full settings, unlimited transforms — require users to:
+
+1. Create a free Cloudflare account
+2. Enable Workers AI on that account
+3. Generate an API token with the correct permissions
+4. Find their Account ID
+
+Without guided onboarding, most users hit a blank text field and give up. This wizard must exist on both the website and the iOS app before the BYOK settings dialog (S4) or filter builder (S5) are shipped.
+
+**Check `gicFormsForCloudflare` first:** If a setup wizard already exists there, adapt it directly rather than building from scratch.
+
+---
+
+### Website: `docs/cloudflare-setup.html`
+
+#### S0.1 — Setup Wizard Page
+
+A dedicated page with a **4-step progress indicator** at the top (Step 1 of 4 · Step 2 of 4 · …). Each step is a card with clear instructions, screenshots or illustrations, and a CTA. The page can be used standalone *or* opened as a modal overlay from try.html / build.html so the user never loses their work.
+
+Accessible from:
+- Settings dialog → "Get your free Cloudflare API token →" link
+- The "No key" status banner on try.html and build.html → "Set up in 2 minutes" button
+- The site footer → "Using your own key"
+
+---
+
+**Step 1 — Create Your Free Account**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Step 1 of 4 — Create a free Cloudflare account             │
+│─────────────────────────────────────────────────────────────│
+│ Cloudflare's free plan includes Workers AI with enough     │
+│ capacity for hundreds of photo transforms per day.         │
+│ No credit card required.                                   │
+│                                                             │
+│ [Open Cloudflare Sign-Up ↗]   Already have one? Skip →    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- "Open Cloudflare Sign-Up" opens `cloudflare.com/sign-up` in a new tab
+- "Already have one? Skip →" advances to Step 2
+
+---
+
+**Step 2 — Enable Workers AI**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Step 2 of 4 — Enable Workers AI                            │
+│─────────────────────────────────────────────────────────────│
+│  1. Log in to dash.cloudflare.com                          │
+│  2. In the left sidebar, click "AI"                        │
+│  3. Click "Enable Workers AI"                              │
+│                                                             │
+│ Workers AI is free. You get 10,000 neurons/day at no cost. │
+│                                        [Done, next step →] │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Each numbered step has a screenshot thumbnail (expandable on click).
+
+---
+
+**Step 3 — Find Your Account ID**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Step 3 of 4 — Find your Account ID                         │
+│─────────────────────────────────────────────────────────────│
+│ Your Account ID is a 32-character string shown in the      │
+│ right sidebar of your Cloudflare dashboard.                │
+│                                                             │
+│ [Screenshot: dashboard with arrow pointing to Account ID]  │
+│                                                             │
+│ Account ID: [________________________________] [Save]      │
+│             ✓ That looks right — 32 characters             │
+│             ✗ Account IDs are 32 characters — check again  │
+│                                        [Next →]            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- Inline validation: check for exactly 32 hex characters
+- "Save" stores the Account ID to localStorage immediately (no need to re-enter in Step 4)
+- "Next" is only enabled after validation passes
+
+---
+
+**Step 4 — Create an API Token**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Step 4 of 4 — Create your API token                        │
+│─────────────────────────────────────────────────────────────│
+│ This token lets GIC Photo Filters run transforms on your   │
+│ behalf. It can only access Workers AI — nothing else.      │
+│                                                             │
+│  1. Go to dash.cloudflare.com/profile/api-tokens           │
+│  2. Click "Create Token"                                   │
+│  3. Choose "Workers AI Read & Write" template              │
+│     (or manually add scopes: ai:read, ai:write)            │
+│  4. Click "Continue to summary" → "Create Token"           │
+│  5. Copy the token — it's shown only once!                 │
+│                                                             │
+│ API Token: [🔑 ______________________________] [👁]        │
+│                                                             │
+│ [Save & Test Connection]                                   │
+│  ✓ Connected — 8,200 neurons available today               │
+│  ✗ Invalid token — check it in your Cloudflare dashboard   │
+│  ✗ Account not found — verify your Account ID in Step 3   │
+│  ✗ Workers AI not enabled — complete Step 2 first         │
+│                                                             │
+│ [🎉 Done — Try a Filter!]  (enabled after test passes)    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- "Save & Test Connection" calls `GET /api/health` (see health endpoint spec below) — no neurons spent
+- Shows the specific error message returned by the health check
+- "Done — Try a Filter!" links to try.html and is only shown after a successful test
+
+---
+
+#### S0.2 — Inline "No Key" Status Banner
+
+When no Cloudflare credentials are configured, show a friendly inline banner above the transform button on **both try.html and build.html** — never a harsh error:
+
+```
+┌───────────────────────────────────────────────────────────┐
+│ 🔑  Using demo mode — 3 free transforms left today       │
+│     Add your free Cloudflare key for unlimited access.   │
+│                              [Set up in 2 minutes →]     │
+└───────────────────────────────────────────────────────────┘
+```
+
+- "Set up in 2 minutes →" opens the setup wizard as a **modal overlay** — the uploaded photo and all current settings are preserved underneath
+- Counter ("3 free transforms left today") reflects the rate-limited GIC demo proxy
+- When credentials are configured: replace banner with "🟢 Your Cloudflare key · 8,200 neurons available · [Settings]"
+
+---
+
+### iOS App: Setup Wizard
+
+#### S0.3 — First-Launch Wizard Sheet
+
+**Check `gicFormsForCloudflare` for an existing wizard sheet — if it exists, adapt it directly.**
+
+If building new: a SwiftUI multi-step `.sheet()` that appears automatically on first launch when no credentials are saved, or when the user taps "Set up Cloudflare" in the Settings card. Uses the same 4-step flow as the website.
+
+**Step 1 — Welcome**
+- Illustration + headline: "Connect your free Cloudflare account"
+- Body: "Get hundreds of photo transforms per day at no cost."
+- Buttons: "I have a Cloudflare account →" / "Create a free account ↗" (opens Safari)
+- Link: "Skip for now (use demo mode)" — dismisses sheet, shows demo banner in app
+
+**Step 2 — Enable Workers AI**
+- Numbered instruction list with a "Open Cloudflare Dashboard ↗" button
+- "Done, next →" advances to Step 3
+
+**Step 3 — Account ID**
+- Screenshot/illustration
+- `TextField` with live 32-char hex validation
+- Inline feedback: "Looks good ✓" or "Should be 32 characters"
+- "Next →" enabled only after validation passes
+
+**Step 4 — API Token**
+- Numbered instructions
+- `SecureField` with reveal toggle
+- "Test Connection" button → calls `/api/health` via the app's network layer → shows inline result:
+  - ✅ "Connected — 8,200 neurons available today"
+  - ❌ "Invalid token — check your Cloudflare dashboard" (tappable for full error)
+- "You're all set! →" (enabled after test passes) → dismisses sheet, opens filter gallery
+
+#### S0.4 — Trigger Points in the App
+
+| Trigger | Behavior |
+|---|---|
+| First launch, no saved credentials | Wizard sheet appears automatically |
+| Settings card → "Connect Cloudflare" button | Opens wizard sheet |
+| Transform attempt with no credentials | Shows banner: "Add your Cloudflare key — [Set up, 2 min]" → tapping opens wizard **as a sheet**, not navigation |
+| Transform 429 / demo limit hit | Shows banner with "Add your key" CTA → opens wizard as a sheet |
+
+**Critical:** Never navigate away from the current screen. The wizard always opens as a sheet/modal so the user's photo and filter selection are preserved.
+
+---
+
+### `/api/health` Endpoint Spec
+
+This new Cloudflare Function endpoint is used by both S0 (wizard "Test Connection") and S4.1 ("Test connection" button in settings). It verifies credentials and returns neuron balance **without spending any neurons**.
+
+**Request:**
+```
+GET /api/health
+X-CF-Account-ID: <32-char account ID>
+X-CF-API-Token: <Cloudflare API token>
+```
+
+**Worker implementation:**
+1. Read `X-CF-Account-ID` and `X-CF-API-Token` headers
+2. If either is missing: return `{ "ok": false, "error": "No credentials provided", "status": 400 }`
+3. Call `GET https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/usage` with `Authorization: Bearer {apiToken}`
+4. If Cloudflare returns success: return `{ "ok": true, "neuronsUsed": 1800, "neuronsLimit": 10000, "neuronsRemaining": 8200 }`
+5. On error from Cloudflare: parse the error and return a user-friendly message:
+   - 401 → `{ "ok": false, "error": "Invalid API token — check it in your Cloudflare dashboard" }`
+   - 403 → `{ "ok": false, "error": "Token doesn't have Workers AI permission — re-create with ai:read scope" }`
+   - 404 → `{ "ok": false, "error": "Account not found — verify your Account ID" }`
+   - Other → `{ "ok": false, "error": "Cloudflare error: <original message>" }`
+
+**Never** log or store the user's token in any Cloudflare KV, log, or analytics.
+
+---
+
+## S1 — iOS App: Sandbox & Networking Entitlements Fix
+
+### Problem
+
+When built for **macOS** (Mac Catalyst / native macOS target), the app fails every network call with:
+
+```
+networkd_settings_read_from_file Sandbox is preventing this process from reading
+  networkd settings file at "/Library/Preferences/com.apple.networkd.plist"
+nw_resolver_can_use_dns_xpc_block_invoke Sandbox does not allow access to com.apple.dnssd.service
+NSURLErrorDomain Code=-1003 "A server with the specified hostname could not be found."
+```
+
+The root cause: the Xcode project **has no entitlements file**. On macOS, App Sandbox is on by default for new projects, and without an explicit `com.apple.security.network.client = true` entitlement, all outgoing HTTP requests are blocked by the sandbox.
+
+The reference app `gicFormsForCloudflare` already has this solved:
+
+```xml
+<!-- gicFormsForCloudflare.entitlements -->
+<key>com.apple.security.app-sandbox</key>    <true/>
+<key>com.apple.security.network.client</key> <true/>
+```
+
+### Tasks
+
+#### S1.1 — Create Entitlements File
+
+Create `GIC Photo Filters/GIC Photo Filters/GIC_Photo_Filters.entitlements`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>
+```
+
+Entitlements included:
+
+| Entitlement | Why |
+|---|---|
+| `com.apple.security.app-sandbox` | Required for App Store distribution |
+| `com.apple.security.network.client` | **Fixes the DNS/network sandbox denial** — allows outgoing HTTP to `photofilters.gic.mx` |
+| `com.apple.security.files.user-selected.read-write` | Allows saving transformed photos via the file picker / share sheet |
+
+#### S1.2 — Wire Entitlements in Xcode Project
+
+In the `GIC Photo Filters.xcodeproj/project.pbxproj`, add `CODE_SIGN_ENTITLEMENTS` for **both** the Debug and Release build configurations of the macOS target:
+
+```
+CODE_SIGN_ENTITLEMENTS = "GIC Photo Filters/GIC_Photo_Filters.entitlements";
+```
+
+#### S1.3 — Verify Fix
+
+1. Clean build (`Cmd+Shift+K`)
+2. Run on macOS (My Mac destination)
+3. Confirm `filters-index.json` downloads successfully from `https://photofilters.gic.mx/docs/filters-index.json`
+4. Confirm no `networkd_settings_read_from_file` errors in Xcode console
+5. Confirm transforms can reach the backend
+
+---
+
+## S2 — iOS App: Card-Based Settings Redesign
+
+### Problem
+
+The current `SettingsView.swift` is a plain `Form { Section { ... } }` — no visual hierarchy, no model picker, no account ID field, no usage display. The reference `gicFormsForCloudflare/SettingsView.swift` uses a `ScrollView + VStack` with `settingsCard()` helpers, tinted SF Symbol icons, and polished card styling.
+
+### Reference Architecture (gicFormsForCloudflare)
+
+```swift
+// Pattern from gicFormsForCloudflare/SettingsView.swift
+ScrollView {
+    VStack(alignment: .leading, spacing: 20) {
+        settingsCard(title: "Cloudflare", systemImage: "cloud.fill", tint: .orange) {
+            ExpandableKeyField(key: .cloudflareAPIToken, icon: "cloud.fill", color: .orange)
+            ExpandableKeyField(key: .cloudflareAccountID, icon: "number", color: .orange)
+            // ...
+        }
+    }
+}
+```
+
+### Tasks
+
+#### S2.1 — Create `settingsCard()` Helper
+
+Add a `settingsCard` ViewBuilder function (either as a method on `SettingsView` or a standalone `SettingsCard` View), matching the reference app's pattern:
+
+```swift
+@ViewBuilder
+func settingsCard<Content: View>(
+    title: String,
+    systemImage: String,
+    tint: Color,
+    @ViewBuilder content: () -> Content
+) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+        Label(title, systemImage: systemImage)
+            .font(.headline)
+            .foregroundStyle(tint)
+        content()
+    }
+    .padding(16)
+    .background(.secondarySystemGroupedBackground)
+    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+}
+```
+
+#### S2.2 — Replace Form with ScrollView + Card Layout
+
+Replace the current `Form { ... }` body with `ScrollView { VStack(spacing: 20) { ... } .padding() }` and build these cards:
+
+| Card | Icon | Tint | Content |
+|------|------|------|---------|
+| **Catalog** | `shippingbox.fill` | `.accentColor` | Remote toggle, remote URL field, last sync date, Refresh button |
+| **Cloudflare Connection** | `cloud.fill` | `.orange` | API token (SecureField + reveal toggle), Account ID field, "Test Connection" button, Clear token, Save button |
+| **AI Model** | `cpu` | `.blue` | Model picker (see S2.3) |
+| **Usage Today** | `chart.bar.fill` | `.green` | Neuron progress bar, raw numbers, estimated remaining transforms |
+| **Deep Links** | `link` | `.secondary` | Deep link examples list |
+
+#### S2.3 — Add Model Picker
+
+Add `preferredModel: String` (default `"default"`) to `AppSettingsSnapshot`. Display as a `Picker` or button grid inside the AI Model card:
+
+| Display Name | Model ID |
+|---|---|
+| Use filter default | `default` |
+| FLUX.2 Klein 9B (Recommended) | `flux2-klein-9b` |
+| FLUX.2 Klein 4B | `flux2-klein-4b` |
+| SD v1.5 img2img | `sd15-img2img` |
+| SD v1.5 Inpainting | `sd15-inpainting` |
+
+#### S2.4 — Add Cloudflare Account ID Field
+
+Add `cloudflareAccountID` to `AppSettingsSnapshot` (stored in Keychain alongside the token). Show an Account ID text field in the Cloudflare Connection card with helper text and a "Open dashboard ↗" link.
+
+#### S2.5 — Add "Test Connection" Button in Settings Card
+
+The Cloudflare Connection card includes a "Test Connection" button that calls `/api/health` (see S0 endpoint spec) and shows inline result:
+- ✅ "Connected — 8,200 neurons available today (resets midnight UTC)"
+- ❌ Specific error from the health endpoint (tappable to expand full technical detail)
+
+This is the same `/api/health` call used by the setup wizard. No neurons are spent.
+
+#### S2.6 — Add Usage Tracking Display
+
+Add a "Usage Today" card with:
+- `ProgressView(value: used, total: limit)` for neurons
+- Raw numbers: "1,200 / 10,000 neurons"
+- Estimated remaining transforms at the selected model's cost
+- "Resets at midnight UTC"
+- "Refresh usage" button (calls `/api/health` and updates the display)
+
+---
+
+## S3 — iOS App: 401/429 Error Messages & Before/After Preview Images
+
+### S3.1 — Categorized Error Messages
+
+In `TransformComposerView.swift` and `TransformResultView.swift`, replace generic error alerts with specific, actionable messages. **Note: the 429 message is different for the app (user is already in the app) vs. the website.**
+
+| HTTP Status | Context | User-Facing Message | Action |
 |---|---|---|---|
-| **Content unit** | YAML form + .xlsx + .help.md | .js worker + _help.md | filter manifest (.json) + .js worker + _help.md |
-| **Content count** | 84,298 forms | 200 apps | 200+ filters (growing) |
-| **Categories** | 418 (folder-based) | 17 (folder-based) | 15 (folder-based) |
-| **Index file** | `forms-index.json` | `apps-index.json` | `filters-index.json` |
-| **Browse page** | search, filter by category | search, filter by category/AI | search, filter by category/model/occasion |
-| **Preview page** | renders YAML form | live demo iframe | **live photo upload + transform** |
-| **Companion app** | `gicFormsForCloudflare` | `oneTimeUseWebApp` | `gicPhotoFiltersApp` |
-| **Hosting** | GitHub Pages | GitHub Pages | **Cloudflare Pages** (needs Workers for AI) |
-| **Backend** | None (static only) | None (static only) | **Cloudflare Worker** (AI inference endpoint) |
-| **Design system** | Tailwind CDN, orange `#ec5b13` | Same | Same design system, camera/photo accent |
+| 401 Unauthorized | App + Site | "Your API token is invalid or expired. Update it in Settings." | "Open Settings" button |
+| 429 Rate Limited | **App** | "Daily limit reached. Add your own free Cloudflare key in Settings for unlimited access." | "Open Settings" button |
+| 429 Rate Limited | **Website** | "Daily free limit reached. Get the iOS app for unlimited access, or add your own Cloudflare key." | "Get App" link + "Add key" link |
+| -1003 (DNS / no server found) | App | "Cannot reach the transform service. Check your internet connection or verify the URL in Settings." | "Open Settings" + Retry |
+| 503 / API error | App + Site | "The AI service is temporarily unavailable. Try again in a moment." | Retry button |
+| Image too large | App + Site | "Photo too large. Please use an image under 5MB." | — |
 
-### Why Cloudflare Pages instead of GitHub Pages
+Make the error view tappable to expand the full technical error for debugging.
 
-Unlike forms and onePageApps (100% static), this project needs a **backend Worker** to call Workers AI models. Cloudflare Pages + Functions is the natural fit:
+### S3.2 — Before/After Preview Images in Filter Cards
 
-- Pages serves the static site (HTML, JS, CSS)
-- Pages Functions (Workers under the hood) handle `/api/transform` endpoints
-- Workers AI binding (`[ai]`) is natively available
-- R2 binding for temporary image storage
-- Same custom domain setup via Cloudflare DNS
+In `FilterDetailView.swift`:
+- When `previewImages` is available in the filter JSON, download and display `previewImages[0].after` as the card thumbnail using `AsyncImage`
+- Show a swipeable before/after comparison using `GeometryReader` + drag gesture
+- Cache thumbnails via standard `URLSession` caching
 
 ---
 
-## 3. Core Concept: Photo Filter Mini-Apps
+## S4 — Website: Full BYOK Settings Dialog
 
-Each "filter" is a **predefined transformation recipe** with:
+### Problem
 
-1. **A baked-in prompt** (the creative direction — users never write prompts)
-2. **A model selection** (which Workers AI or external model to use)
-3. **Parameters** (strength, guidance, dimensions, mask strategy)
-4. **A fun name and description** (e.g., "Grinch-ify", "Retro Yearbook '84", "Remove Background")
+The current try page has a minimal `<details>` accordion with just Account ID and API Token fields. Users need a proper settings panel — keys, model selection, neuron balance, storage options — so they can **design and test their own filters** on the website.
 
-### Filter Types
+### Security Architecture for All Transforms
 
-| Type | Description | Model | Example |
-|---|---|---|---|
-| **img2img** | Transform the whole photo with a style prompt | FLUX.2 klein, SD v1.5 img2img | "Turn into Grinch", "Anime Portrait" |
-| **inpainting** | Mask + replace specific regions | SD v1.5 Inpainting | "Add Santa Hat", "Change Background" |
-| **style-transfer** | Apply artistic style while preserving content | FLUX.1 schnell, SDXL | "Pop Art", "Oil Painting", "Pixel Art" |
-| **utility** | Practical photo tools | Workers AI or client-side | "Remove Background", "Upscale 2x", "Colorize B&W" |
-| **overlay** | Client-side face detection + overlay (no AI cost) | MediaPipe + Canvas | "Santa Hat", "Sunglasses", "Party Hat" |
+**All transform requests — whether using the user's BYOK key or GIC's demo proxy — flow through `photofilters.gic.mx/api/transform`.** The browser never calls the Cloudflare API directly (which would expose the token in DevTools and violate CORS policy).
 
----
+The routing logic in the Worker:
+1. Check for `X-CF-Account-ID` and `X-CF-API-Token` request headers
+2. **If headers are present** → use the user's credentials for the Workers AI call (charged to their free quota)
+3. **If headers are absent** → fall back to GIC's own token, rate-limited to **3 requests per IP per day** (demo mode)
+4. Never log, echo, or store user tokens
 
-## 4. The 200 Filters — Full Catalog by Category
+This pattern means the user's API token travels **only as a request header over HTTPS**, is never in a URL, never in a response body, and is never stored server-side.
 
-### 4.1 🎄 Holiday & Seasonal (25 filters)
+### Tasks
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 1 | Grinch-ify | "Transform this person into a green furry Grinch character" | img2img | FLUX.2 klein |
-| 2 | Santa Claus | "Transform this person into Santa Claus with white beard, red suit, and hat" | img2img | FLUX.2 klein |
-| 3 | Mrs. Claus | "Transform into Mrs. Claus with spectacles, white hair, red dress" | img2img | FLUX.2 klein |
-| 4 | Elf Workshop | "Transform into a cheerful Christmas elf with pointy ears and green outfit" | img2img | SD v1.5 img2img |
-| 5 | Snowman Buddy | "Place person next to a photorealistic snowman in a winter wonderland" | inpainting | SD v1.5 Inpainting |
-| 6 | Ugly Christmas Sweater | "Dress this person in the most garish ugly Christmas sweater" | img2img | FLUX.2 klein |
-| 7 | Halloween Zombie | "Transform into a realistic zombie with torn clothes and pale skin" | img2img | FLUX.2 klein |
-| 8 | Vampire Portrait | "Transform into an elegant vampire with fangs and dark cape" | img2img | SD v1.5 img2img |
-| 9 | Witch/Wizard | "Transform into a magical witch/wizard with hat and glowing wand" | img2img | FLUX.2 klein |
-| 10 | Day of the Dead | "Apply traditional Día de los Muertos face paint with marigold crown" | img2img | FLUX.2 klein |
-| 11 | Easter Bunny | "Transform into the Easter Bunny with fluffy ears and pastel outfit" | img2img | SD v1.5 img2img |
-| 12 | Cupid Valentine | "Transform into Cupid with wings, bow and arrow, pink theme" | img2img | FLUX.2 klein |
-| 13 | Thanksgiving Pilgrim | "Dress as a classic Thanksgiving pilgrim with buckle hat" | img2img | SD v1.5 img2img |
-| 14 | New Year Glam | "Add sparkly New Year's Eve outfit with confetti and champagne" | img2img | FLUX.2 klein |
-| 15 | Fourth of July | "Patriotic transformation with stars, stripes, and fireworks backdrop" | img2img | SD v1.5 img2img |
-| 16 | Chinese New Year Dragon | "Traditional Chinese New Year costume with dragon motifs" | img2img | FLUX.2 klein |
-| 17 | Holi Festival Colors | "Cover person in vibrant Holi festival powder colors" | img2img | FLUX.2 klein |
-| 18 | St. Patrick's Leprechaun | "Transform into a leprechaun with green suit and pot of gold" | img2img | SD v1.5 img2img |
-| 19 | Mardi Gras Mask | "Add an ornate Mardi Gras mask with feathers and beads" | inpainting | SD v1.5 Inpainting |
-| 20 | Spring Flower Crown | "Add a beautiful fresh flower crown and spring garden background" | inpainting | SD v1.5 Inpainting |
-| 21 | Summer Beach Vibes | "Transform into a beach scene with tropical shirt and sunset" | img2img | FLUX.2 klein |
-| 22 | Autumn Harvest | "Place in an autumn harvest scene with pumpkins and falling leaves" | img2img | SD v1.5 img2img |
-| 23 | Winter Wonderland | "Transform into a magical winter scene with snow and ice" | img2img | FLUX.2 klein |
-| 24 | Carnival Costume | "Elaborate carnival costume with feathers and sequins" | img2img | FLUX.2 klein |
-| 25 | Diwali Festival | "Add Diwali festive attire with diyas and rangoli background" | img2img | FLUX.2 klein |
+#### S4.1 — Create Settings Modal
 
-### 4.2 🎬 Pop Culture & Characters (25 filters)
+A `<dialog>` element (or fixed-overlay modal) accessible from the settings gear icon in the site header. Opens without page navigation so the user never loses their current photo or filter state.
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 26 | Superhero | "Transform into a superhero with cape and mask, comic book style" | img2img | FLUX.2 klein |
-| 27 | Space Astronaut | "Person in a realistic NASA spacesuit with visor, space background" | img2img | FLUX.2 klein |
-| 28 | Medieval Knight | "Transform into a medieval knight in shining armor" | img2img | SD v1.5 img2img |
-| 29 | Pirate Captain | "Transform into a pirate captain with tricorn hat and eyepatch" | img2img | FLUX.2 klein |
-| 30 | Cowboy/Cowgirl | "Wild West cowboy with hat, boots, and desert backdrop" | img2img | SD v1.5 img2img |
-| 31 | Ninja Warrior | "Transform into a stealthy ninja with mask and dark outfit" | img2img | FLUX.2 klein |
-| 32 | Viking Warrior | "Transform into a fierce Viking with braided hair and fur armor" | img2img | FLUX.2 klein |
-| 33 | Egyptian Pharaoh | "Transform into an Egyptian pharaoh with golden headdress" | img2img | SD v1.5 img2img |
-| 34 | Roman Gladiator | "Transform into a Roman gladiator in the Colosseum" | img2img | FLUX.2 klein |
-| 35 | Samurai | "Transform into a samurai warrior with traditional armor and katana" | img2img | FLUX.2 klein |
-| 36 | Steampunk Explorer | "Steampunk style with brass goggles, gears, and Victorian attire" | img2img | FLUX.2 klein |
-| 37 | Cyberpunk Runner | "Cyberpunk aesthetic with neon lights, augmented reality implants" | img2img | FLUX.2 klein |
-| 38 | Wizard of Oz | "Transform into a character from Oz with emerald city backdrop" | img2img | SD v1.5 img2img |
-| 39 | Fairy Tale Princess/Prince | "Royal fairy tale attire with enchanted castle background" | img2img | FLUX.2 klein |
-| 40 | Rock Star | "Transform into a rock star with leather jacket, guitar, stage lights" | img2img | FLUX.2 klein |
-| 41 | Hip Hop Artist | "Transform with gold chains, snapback, graffiti backdrop" | img2img | SD v1.5 img2img |
-| 42 | Disco Dancer | "1970s disco outfit with afro, sequins, dance floor" | img2img | FLUX.2 klein |
-| 43 | Mad Scientist | "Lab coat, wild hair, bubbling beakers, lightning backdrop" | img2img | SD v1.5 img2img |
-| 44 | Secret Agent | "Sleek black suit, dark sunglasses, spy gadgets" | img2img | FLUX.2 klein |
-| 45 | Time Traveler | "Mix of clothing from different eras, time portal background" | img2img | FLUX.2 klein |
-| 46 | Robot/Android | "Half-human half-robot transformation with metallic features" | img2img | FLUX.2 klein |
-| 47 | Mermaid/Merman | "Underwater transformation with scales and ocean backdrop" | img2img | FLUX.2 klein |
-| 48 | Dragon Rider | "Sitting atop a majestic dragon with fantasy landscape" | img2img | FLUX.2 klein |
-| 49 | Jedi Knight | "Galactic warrior with hooded robe and glowing light blade" | img2img | FLUX.2 klein |
-| 50 | Explorer/Archaeologist | "Indiana Jones-style adventurer with hat, whip, and ancient ruins" | img2img | SD v1.5 img2img |
+**Section 1 — Cloudflare Workers AI**
 
-### 4.3 🎨 Artistic Styles (25 filters)
+- Account ID (`text` input, 32-char hex validation with inline "Looks good ✓" / "Should be 32 characters")
+- API Token (`password` input with reveal toggle and a clear button)
+- "Test Connection" button → calls `GET /api/health` with current credentials (no neurons spent) → shows:
+  - ✅ "Connected — 8,200 neurons available today (resets midnight UTC)"
+  - ❌ Specific human-readable error (see `/api/health` spec in S0)
+- Link: "Don't have a key? Set up in 2 minutes →" opens the S0 setup wizard as a nested modal
+- **Photo privacy notice** (shown directly below the API token field):
+  > 📷 Your photos are processed and immediately discarded — never stored on our servers.
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 51 | Oil Painting | "Classical oil painting style, rich colors, visible brushstrokes" | style-transfer | FLUX.2 klein |
-| 52 | Watercolor | "Delicate watercolor painting with soft edges and flowing colors" | style-transfer | FLUX.2 klein |
-| 53 | Pop Art (Warhol) | "Andy Warhol style pop art with bold colors and halftone dots" | style-transfer | FLUX.2 klein |
-| 54 | Pencil Sketch | "Detailed pencil sketch with cross-hatching and shading" | style-transfer | SD v1.5 img2img |
-| 55 | Charcoal Drawing | "Dramatic charcoal drawing with deep shadows and texture" | style-transfer | SD v1.5 img2img |
-| 56 | Anime Portrait | "Japanese anime style with large eyes and colorful hair" | style-transfer | FLUX.2 klein |
-| 57 | Manga Panel | "Black and white manga panel with speed lines and dramatic pose" | style-transfer | SD v1.5 img2img |
-| 58 | Pixar/3D Cartoon | "Pixar-style 3D rendered character with exaggerated features" | style-transfer | FLUX.2 klein |
-| 59 | Simpsons Character | "Yellow-skinned cartoon character in Simpsons animation style" | style-transfer | FLUX.2 klein |
-| 60 | Studio Ghibli | "Studio Ghibli anime style with soft colors and magical atmosphere" | style-transfer | FLUX.2 klein |
-| 61 | Comic Book | "Bold comic book style with thick outlines and Ben-Day dots" | style-transfer | FLUX.2 klein |
-| 62 | Pixel Art 8-Bit | "Retro 8-bit pixel art sprite with limited color palette" | style-transfer | SD v1.5 img2img |
-| 63 | Pixel Art 16-Bit | "16-bit SNES era pixel art with richer colors" | style-transfer | SD v1.5 img2img |
-| 64 | Impressionist | "Monet-style impressionist painting with light dappled colors" | style-transfer | FLUX.2 klein |
-| 65 | Cubist (Picasso) | "Cubist portrait in the style of Picasso with geometric shapes" | style-transfer | FLUX.2 klein |
-| 66 | Art Nouveau | "Art Nouveau style with organic flowing lines and floral motifs" | style-transfer | FLUX.2 klein |
-| 67 | Stained Glass | "Transform into a stained glass window artwork" | style-transfer | SD v1.5 img2img |
-| 68 | Mosaic Tile | "Ancient Roman mosaic tile artwork made of small colored squares" | style-transfer | SD v1.5 img2img |
-| 69 | Graffiti/Street Art | "Urban graffiti street art style with spray paint and bold colors" | style-transfer | FLUX.2 klein |
-| 70 | Ukiyo-e Japanese | "Traditional Japanese Ukiyo-e woodblock print style" | style-transfer | FLUX.2 klein |
-| 71 | Art Deco | "1920s Art Deco style with geometric shapes and gold accents" | style-transfer | FLUX.2 klein |
-| 72 | Surrealist (Dalí) | "Surrealist landscape with melting clocks and dreamlike quality" | style-transfer | FLUX.2 klein |
-| 73 | Minimalist Line Art | "Single continuous line drawing portrait, minimalist" | style-transfer | SD v1.5 img2img |
-| 74 | Gothic Dark Art | "Dark gothic art style with dramatic lighting and ornate details" | style-transfer | FLUX.2 klein |
-| 75 | Caricature | "Exaggerated caricature with humorous feature distortions" | style-transfer | FLUX.2 klein |
+**Section 2 — External AI Providers** (collapsible, for advanced users)
+- Replicate API Token
+- fal.ai API Key
+- OpenAI API Key (for future DALL-E integration)
+- Each with `password` input + reveal toggle + clear button
 
-### 4.4 📷 Retro & Vintage (20 filters)
+**Section 3 — AI Model Preference**
+- Model picker matching the app's choices:
+  - Use filter default
+  - FLUX.2 Klein 9B
+  - FLUX.2 Klein 4B
+  - SD v1.5 img2img
+  - SD v1.5 Inpainting
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 76 | Retro Yearbook '84 | "1984 school yearbook photo with soft focus and pastel backdrop" | img2img | FLUX.2 klein |
-| 77 | Retro Yearbook '90s | "1990s yearbook with laser background and big hair" | img2img | FLUX.2 klein |
-| 78 | VHS Glitch | "VHS tape distortion with scanlines, chroma bleed, tracking errors" | style-transfer | client-side |
-| 79 | Polaroid Vintage | "Instant Polaroid photo with white border, faded warm tones" | style-transfer | client-side |
-| 80 | 1920s Great Gatsby | "1920s flapper/gentleman style with sepia tones and art deco" | img2img | FLUX.2 klein |
-| 81 | 1950s Pin-Up | "Classic 1950s pin-up style with vintage colors and pose" | img2img | SD v1.5 img2img |
-| 82 | 1960s Psychedelic | "Psychedelic 1960s poster with swirling colors and peace signs" | style-transfer | FLUX.2 klein |
-| 83 | 1970s Film Grain | "Warm 70s film photography with heavy grain and muted colors" | style-transfer | client-side |
-| 84 | 1980s Neon | "80s synthwave aesthetic with neon grid, palm trees, sunset" | img2img | FLUX.2 klein |
-| 85 | Daguerreotype | "Early 1840s daguerreotype photograph, silver-toned, formal pose" | style-transfer | SD v1.5 img2img |
-| 86 | Civil War Tintype | "1860s tintype photograph, sepia, stoic expression" | style-transfer | SD v1.5 img2img |
-| 87 | Victorian Portrait | "Formal Victorian-era studio portrait with ornate frame" | img2img | FLUX.2 klein |
-| 88 | Roaring Twenties | "1920s speakeasy vibe with jazz-age fashion and atmosphere" | img2img | FLUX.2 klein |
-| 89 | Old Hollywood | "Classic Old Hollywood glamour shot, black and white, dramatic lighting" | style-transfer | FLUX.2 klein |
-| 90 | Wartime 1940s | "1940s wartime portrait with military or home-front attire" | img2img | SD v1.5 img2img |
-| 91 | Woodstock '69 | "1969 Woodstock festival hippie with tie-dye and flowers" | img2img | FLUX.2 klein |
-| 92 | Disco Fever '77 | "1977 disco era with bell-bottoms, platform shoes, mirror ball" | img2img | SD v1.5 img2img |
-| 93 | MTV Era '85 | "1985 MTV music video style with bold makeup and fashion" | img2img | FLUX.2 klein |
-| 94 | Grunge '93 | "1993 Seattle grunge with flannel, ripped jeans, moody lighting" | img2img | SD v1.5 img2img |
-| 95 | Y2K Aesthetic | "Year 2000 aesthetic with butterfly clips, low-rise jeans, frosted tips" | img2img | FLUX.2 klein |
+**Section 4 — Usage & Storage**
 
-### 4.5 👨‍👩‍👧‍👦 Life Events & Milestones (20 filters)
+- Neuron counter: "8,200 / 10,000 neurons available today" (populated after test connection)
+- "Clear all credentials" button (with confirmation)
+- Storage toggle:
+  ```
+  [●──] Store in this browser (recommended)
+        Your credentials are saved in localStorage — private to this browser,
+        never sent to our servers. Clear them any time with the button above.
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 96 | Wedding Day | "Transform into elegant wedding attire with romantic backdrop" | img2img | FLUX.2 klein |
-| 97 | Graduation | "Academic cap and gown with confetti and diploma" | img2img | FLUX.2 klein |
-| 98 | Baby Announcement | "Cute baby announcement card style with stork and pastels" | img2img | SD v1.5 img2img |
-| 99 | Quinceañera | "Traditional quinceañera dress with tiara and ballroom" | img2img | FLUX.2 klein |
-| 100 | Birthday Celebration | "Party hat, balloons, confetti, birthday cake background" | inpainting | SD v1.5 Inpainting |
-| 101 | Retirement Party | "Gold watch, "Happy Retirement" banner, champagne toast" | img2img | SD v1.5 img2img |
-| 102 | First Day of School | "Backpack, lunchbox, school bus background, "First Day" sign" | inpainting | SD v1.5 Inpainting |
-| 103 | Prom Night | "Glamorous prom outfit with corsage and ballroom" | img2img | FLUX.2 klein |
-| 104 | Sweet 16 | "Sweet 16 party style with sparkles and "16" decorations" | img2img | SD v1.5 img2img |
-| 105 | Engagement | "Romantic engagement scene with ring and flowers" | img2img | FLUX.2 klein |
-| 106 | Baby Shower | "Pastel baby shower theme with decorations and gifts" | img2img | SD v1.5 img2img |
-| 107 | Mother's Day | "Beautiful floral Mother's Day portrait with warm colors" | img2img | FLUX.2 klein |
-| 108 | Father's Day | "Classic Father's Day portrait with "World's Best Dad" theme" | img2img | SD v1.5 img2img |
-| 109 | Anniversary (25th Silver) | "Silver anniversary celebration with elegant silver tones" | img2img | FLUX.2 klein |
-| 110 | Anniversary (50th Gold) | "Golden anniversary with gold tones and "50 Years" motif" | img2img | FLUX.2 klein |
-| 111 | Gender Reveal | "Gender reveal party with pink/blue smoke and excitement" | img2img | SD v1.5 img2img |
-| 112 | Welcome Home | "Military homecoming or "Welcome Home" banner with balloons" | inpainting | SD v1.5 Inpainting |
-| 113 | New Job Celebration | "Business attire with "Hired!" badge and office backdrop" | img2img | SD v1.5 img2img |
-| 114 | Baptism/Christening | "White baptismal attire with church and dove backdrop" | img2img | FLUX.2 klein |
-| 115 | Family Reunion | "Large family gathering scene with "Family Reunion" banner" | img2img | SD v1.5 img2img |
+  [──●] Session only
+        Credentials are cleared when you close this tab.
+  ```
+- Default: **localStorage** (the toggle defaults to "Store in this browser")
 
-### 4.6 🐾 Pets & Animals (15 filters)
+#### S4.2 — Update Site Header Nav
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 116 | Pet to Pixar | "Transform pet photo into Pixar 3D animated character" | style-transfer | FLUX.2 klein |
-| 117 | Pet Royal Portrait | "Pet in royal Renaissance painting attire with crown" | img2img | FLUX.2 klein |
-| 118 | Pet Superhero | "Pet wearing a superhero cape and mask" | img2img | SD v1.5 img2img |
-| 119 | Pet in Space | "Pet as an astronaut floating in space" | img2img | FLUX.2 klein |
-| 120 | Pet Christmas Card | "Pet with Santa hat and holiday card border" | inpainting | SD v1.5 Inpainting |
-| 121 | Pet Anime | "Pet in Japanese anime style with sparkly eyes" | style-transfer | FLUX.2 klein |
-| 122 | Pet Pop Art | "Pet in Andy Warhol pop art style, 4-color grid" | style-transfer | FLUX.2 klein |
-| 123 | Pet Sticker | "Turn pet photo into a cute vinyl sticker with white border" | style-transfer | SD v1.5 img2img |
-| 124 | Pet Oil Painting | "Pet as a classical oil painting in ornate gold frame" | style-transfer | FLUX.2 klein |
-| 125 | Pet Birthday | "Pet with party hat, treats, and "Happy Birthday" banner" | inpainting | SD v1.5 Inpainting |
-| 126 | Pet Halloween | "Pet in Halloween costume (vampire, pumpkin, ghost)" | img2img | SD v1.5 img2img |
-| 127 | Pet Valentine | "Pet with heart-shaped sunglasses and "Be Mine" theme" | inpainting | SD v1.5 Inpainting |
-| 128 | Pet Western | "Pet as a cowboy/cowgirl with hat and bandana" | img2img | SD v1.5 img2img |
-| 129 | Pet Wizard | "Pet in wizard hat and robe with magic sparkles" | img2img | SD v1.5 img2img |
-| 130 | Pet Graduation | "Pet in graduation cap and gown with diploma" | inpainting | SD v1.5 Inpainting |
+In `site.mjs` `renderHeader()`, add a ⚙ gear icon button at the right end of the nav that opens the settings modal. Show a small green dot on the gear icon when credentials are configured.
 
-### 4.7 💼 Professional & Business (15 filters)
+#### S4.3 — Connect Settings to Transform Pipeline (Secure Proxy Pattern)
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 131 | Professional Headshot | "Studio-quality professional headshot with neutral background" | img2img | FLUX.2 klein |
-| 132 | LinkedIn Photo | "Polished LinkedIn profile photo with soft professional lighting" | img2img | FLUX.2 klein |
-| 133 | Corporate Portrait | "Corporate portrait with suit/blazer and office bokeh background" | img2img | FLUX.2 klein |
-| 134 | Author Photo | "Book jacket author photo with dramatic moody lighting" | img2img | FLUX.2 klein |
-| 135 | Speaker/Keynote | "Conference speaker on stage with spotlight and audience" | img2img | SD v1.5 img2img |
-| 136 | Chef Portrait | "Professional chef portrait with white chef coat and kitchen" | img2img | SD v1.5 img2img |
-| 137 | Artist Portrait | "Creative artist portrait with paint splashes and studio" | img2img | FLUX.2 klein |
-| 138 | Musician Portrait | "Musician portrait with instrument and moody stage lighting" | img2img | FLUX.2 klein |
-| 139 | Athlete Portrait | "Sports athlete portrait with dynamic pose and stadium" | img2img | SD v1.5 img2img |
-| 140 | Doctor/Nurse | "Medical professional portrait with white coat and stethoscope" | img2img | SD v1.5 img2img |
-| 141 | Teacher Portrait | "Warm teacher portrait with classroom and chalkboard backdrop" | img2img | SD v1.5 img2img |
-| 142 | Real Estate Agent | "Professional real estate agent with luxury home backdrop" | img2img | SD v1.5 img2img |
-| 143 | Fitness Coach | "Fitness coach portrait with gym/outdoor workout backdrop" | img2img | FLUX.2 klein |
-| 144 | Tech Founder | "Silicon Valley tech founder with modern office backdrop" | img2img | FLUX.2 klein |
-| 145 | Podcast Host | "Podcast host with microphone, headphones, studio setup" | img2img | SD v1.5 img2img |
+When the user triggers a transform:
 
-### 4.8 🌍 Travel & Places (15 filters)
+1. Read credentials from the settings store (localStorage or sessionStorage per the user's toggle)
+2. **Always POST to `https://photofilters.gic.mx/api/transform`** — never directly to Cloudflare
+3. If BYOK credentials are configured: include headers `X-CF-Account-ID: <id>` and `X-CF-API-Token: <token>`
+4. If no credentials: send without those headers → Worker uses GIC's rate-limited demo proxy
+5. If external provider credentials exist: include `X-Replicate-Token`, `X-Fal-Key`, etc., and the Worker routes accordingly
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 146 | Paris Eiffel Tower | "Standing in front of the Eiffel Tower in Paris" | inpainting | SD v1.5 Inpainting |
-| 147 | Tokyo Neon Streets | "Walking through neon-lit Tokyo streets at night" | img2img | FLUX.2 klein |
-| 148 | New York Times Square | "Standing in Times Square with billboards and crowds" | inpainting | SD v1.5 Inpainting |
-| 149 | Tropical Beach | "Standing on a pristine tropical beach with turquoise water" | inpainting | SD v1.5 Inpainting |
-| 150 | Northern Lights | "Standing under the Aurora Borealis in Iceland" | inpainting | SD v1.5 Inpainting |
-| 151 | Safari Adventure | "On an African safari with elephants and sunset savanna" | img2img | FLUX.2 klein |
-| 152 | Mountain Summit | "Standing on a mountain peak with clouds below" | inpainting | SD v1.5 Inpainting |
-| 153 | Ancient Ruins | "Exploring ancient Greek or Mayan ruins" | inpainting | SD v1.5 Inpainting |
-| 154 | Venice Gondola | "Riding a gondola in Venice with canal and buildings" | img2img | SD v1.5 img2img |
-| 155 | Great Wall of China | "Walking along the Great Wall of China" | inpainting | SD v1.5 Inpainting |
-| 156 | Machu Picchu | "Standing at Machu Picchu with mist and mountains" | inpainting | SD v1.5 Inpainting |
-| 157 | Santorini Greece | "Standing on a Santorini balcony with blue domes and sea" | inpainting | SD v1.5 Inpainting |
-| 158 | Cherry Blossom Japan | "Under cherry blossom trees in Japan during spring" | inpainting | SD v1.5 Inpainting |
-| 159 | Pyramids of Giza | "Standing before the Great Pyramids of Egypt" | inpainting | SD v1.5 Inpainting |
-| 160 | Amazon Rainforest | "Exploring the lush Amazon rainforest" | inpainting | SD v1.5 Inpainting |
+The user's token is protected by HTTPS transport encryption. It is visible only in the browser's own DevTools (which only the user can access), not to any third party or to our servers beyond the single request handling.
 
-### 4.9 🛠️ Utility & Serious Tools (20 filters)
+#### S4.4 — Update BYOK Status Indicator on Try Page
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 161 | Remove Background | "Remove background, output transparent PNG" | utility | Workers AI / client-side |
-| 162 | Upscale 2x | "Enhance resolution 2x with AI upscaling" | utility | Workers AI |
-| 163 | Upscale 4x | "Enhance resolution 4x with AI super-resolution" | utility | Workers AI |
-| 164 | Colorize B&W | "Colorize a black and white photograph naturally" | utility | Workers AI |
-| 165 | Restore Old Photo | "Restore and enhance damaged/faded old photograph" | utility | Workers AI |
-| 166 | Denoise Photo | "Remove noise and grain from low-light photo" | utility | Workers AI |
-| 167 | Sharpen & Enhance | "Sharpen blurry photo and enhance details" | utility | Workers AI |
-| 168 | Face Retouch | "Subtle skin smoothing and blemish removal" | utility | Workers AI |
-| 169 | Red Eye Fix | "Remove red-eye effect from flash photography" | utility | client-side |
-| 170 | Auto Color Correct | "Automatic color balance and exposure correction" | utility | client-side |
-| 171 | HDR Effect | "Apply HDR-like tone mapping for dramatic range" | utility | client-side |
-| 172 | Blur Background (Bokeh) | "Apply professional depth-of-field blur to background" | utility | Workers AI |
-| 173 | Change Background Color | "Replace background with a solid color of choice" | utility | Workers AI |
-| 174 | Passport Photo | "Crop and format to passport photo specifications" | utility | client-side |
-| 175 | ID Photo | "Format for official ID/visa photo requirements" | utility | client-side |
-| 176 | Social Media Resize | "Smart crop and resize for Instagram/Twitter/LinkedIn" | utility | client-side |
-| 177 | Watermark Remover | "AI-powered watermark removal" | utility | Workers AI |
-| 178 | Object Removal | "Select and remove unwanted objects from photo" | inpainting | SD v1.5 Inpainting |
-| 179 | Face Swap (2 photos) | "Swap faces between two uploaded photos" | utility | Workers AI |
-| 180 | Age Progression | "Show how person might look 20-30 years older" | img2img | FLUX.2 klein |
+Replace the current minimal BYOK accordion with a condensed status bar that opens the settings modal on click:
 
-### 4.10 🎉 Fun & Meme (15 filters)
+```
+🟢 Your Cloudflare key · 8,200 neurons available  [Settings ⚙]
+⚪ Demo mode · 3 free transforms left today        [Add your key →]
+```
 
-| # | Filter Name | Prompt/Description | Type | Model |
-|---|---|---|---|---|
-| 181 | Bobblehead | "Exaggerated big head on tiny body, bobblehead style" | style-transfer | FLUX.2 klein |
-| 182 | Action Figure | "Transform into an action figure in a toy box" | img2img | FLUX.2 klein |
-| 183 | Magazine Cover | "Place on the cover of a glamorous magazine" | inpainting | SD v1.5 Inpainting |
-| 184 | Wanted Poster | "Old West "WANTED" poster with vintage typography" | style-transfer | SD v1.5 img2img |
-| 185 | Trading Card | "Sports or collectible trading card with stats" | style-transfer | SD v1.5 img2img |
-| 186 | Money Bill Portrait | "Place face on a currency bill design" | style-transfer | SD v1.5 img2img |
-| 187 | Stamp Portrait | "Transform into a postage stamp design" | style-transfer | SD v1.5 img2img |
-| 188 | Lego Minifigure | "Transform into a Lego minifigure version" | style-transfer | FLUX.2 klein |
-| 189 | Funko Pop | "Transform into a Funko Pop vinyl figure" | style-transfer | FLUX.2 klein |
-| 190 | Renaissance Meme | "Classical Renaissance painting holding modern objects" | img2img | FLUX.2 klein |
-| 191 | Alien/Extraterrestrial | "Transform into a friendly alien from another planet" | img2img | FLUX.2 klein |
-| 192 | Underwater Portrait | "Floating underwater with bubbles and marine life" | img2img | FLUX.2 klein |
-| 193 | Cloud Portrait | "Face formed in clouds in a blue sky" | style-transfer | FLUX.2 klein |
-| 194 | Food Face | "Arcimboldo-style portrait made entirely of food" | style-transfer | FLUX.2 klein |
-| 195 | Emoji Version | "Transform into a custom emoji/Memoji-style character" | style-transfer | FLUX.2 klein |
-
-### 4.11 🌈 Effects & Filters (10 filters — client-side, no AI cost)
-
-| # | Filter Name | Description | Type |
-|---|---|---|---|
-| 196 | Sepia Tone | Classic sepia/brown tone | overlay (Canvas) |
-| 197 | Black & White | Desaturate to grayscale | overlay (Canvas) |
-| 198 | Vignette | Dark edges, bright center | overlay (Canvas) |
-| 199 | Duotone | Two-color gradient map | overlay (Canvas) |
-| 200 | Glitch Art | Random pixel displacement and color channel shift | overlay (Canvas) |
-| 201 | Mirror/Kaleidoscope | Symmetry mirror effect | overlay (Canvas) |
-| 202 | Tilt Shift | Fake miniature effect with selective blur | overlay (Canvas) |
-| 203 | Lomo/Lomography | Cross-processed colors with heavy vignette | overlay (Canvas) |
-| 204 | Thermal/Infrared | False-color thermal camera look | overlay (Canvas) |
-| 205 | Neon Glow | Edge-detected neon glow on dark background | overlay (Canvas) |
+Demo mode (⚪) reflects GIC's rate-limited proxy (Option B): **3 transforms per IP per day**. This is clearly communicated so users understand it is a sample experience, not the full product. The "Add your key →" link opens the S0 setup wizard modal.
 
 ---
 
-## 5. Category Summary
+## S5 — Custom Filter Builder (Centerpiece Feature)
 
-| # | Category | Slug | Count | Icon | AI Required |
-|---|---|---|---|---|---|
-| 1 | Holiday & Seasonal | `holiday_seasonal` | 25 | 🎄 `gift.fill` | Yes |
-| 2 | Pop Culture & Characters | `pop_culture` | 25 | 🎬 `theatermasks.fill` | Yes |
-| 3 | Artistic Styles | `artistic_styles` | 25 | 🎨 `paintbrush.fill` | Yes |
-| 4 | Retro & Vintage | `retro_vintage` | 20 | 📷 `camera.vintage` | Mixed |
-| 5 | Life Events & Milestones | `life_events` | 20 | 👨‍👩‍👧‍👦 `person.3.fill` | Yes |
-| 6 | Pets & Animals | `pets_animals` | 15 | 🐾 `pawprint.fill` | Yes |
-| 7 | Professional & Business | `professional` | 15 | 💼 `briefcase.fill` | Yes |
-| 8 | Travel & Places | `travel_places` | 15 | 🌍 `globe.americas.fill` | Yes |
-| 9 | Utility & Serious Tools | `utility_tools` | 20 | 🛠️ `wrench.and.screwdriver.fill` | Mixed |
-| 10 | Fun & Meme | `fun_meme` | 15 | 🎉 `party.popper.fill` | Yes |
-| 11 | Effects & Filters | `effects_filters` | 10 | 🌈 `sparkles` | No (client-side) |
-| 12 | Social Media Templates | `social_media` | 5 | 📱 `apps.iphone` | Mixed |
-| 13 | Food & Drink | `food_drink` | 5 | 🍕 `fork.knife` | Yes |
-| 14 | Sports & Fitness | `sports_fitness` | 5 | ⚽ `sportscourt.fill` | Yes |
-| 15 | Fantasy & Sci-Fi | `fantasy_scifi` | 5 | 🚀 `airplane` | Yes |
-| | **Total** | | **205** | | |
+### Problem
+
+Neither the website nor the app has a way to **design, test, and share a custom prompt with a chosen model**. This is the centerpiece of both platforms.
+
+### Page Layout Decision
+
+The filter builder is a **single scrollable page** (not a step-by-step wizard). All sections are visible at once; users scroll through and fill them in at their own pace. A section completion indicator (colored dot or checkmark) shows which sections are done. A **sticky "Run Test" button** appears at the bottom of the viewport once Sections 1 (prompt) and 2 (model) are filled in.
 
 ---
 
-## 6. `filters-index.json` Schema
+### Website: `build.html`
 
-The central manifest, analogous to `forms-index.json` and `apps-index.json`:
+#### S5.1 — Create Build Page
+
+A new page accessible from the primary nav ("Build"). All sections are stacked as cards on a scrollable page.
+
+---
+
+**Section 1 — Write Your Prompt**
+- `<textarea>` for the main transformation prompt (max 500 chars, live character counter)
+- `<textarea>` for the negative prompt (max 300 chars, collapsible by default)
+- "Need inspiration?" expandable panel: rotating suggestions from existing filter prompts (3 at a time, shuffle button)
+- "Tips for great prompts" expandable: describe the style, not the subject; add lighting and medium cues; use negative prompts to reduce artifacts
+
+---
+
+**Section 2 — Choose Your Model**
+
+Visual model cards (not a plain dropdown):
+
+| Model Card | Tagline | Best for |
+|---|---|---|
+| FLUX.2 Klein 9B ⭐ Recommended | "Highest quality" | Character transforms, faces, artistic styles |
+| FLUX.2 Klein 4B | "Faster results" | Style transfers, abstract effects |
+| SD v1.5 img2img | "Classic look" | Painterly and retro artistic styles |
+| SD v1.5 Inpainting | "Add or replace" | Specific region changes, accessories |
+| *(shown only if external keys set)* Replicate / fal.ai models | — | — |
+
+Clicking a card selects it (highlighted border). Section 2 is marked complete.
+
+---
+
+**Section 3 — Set Parameters**
+- **Strength** slider (0.3–1.0), labeled "Subtle ← → Dramatic", with numeric readout
+- **Guidance** slider (3–15), labeled "Creative ← → Faithful", with numeric readout
+- **Dimensions** button group: 512×512 / 768×768 / 1024×1024
+- **Variants** toggle: 1 or 2 results
+
+---
+
+**Section 4 — Test With a Photo**
+
+**State preservation rule:** If the user clicks "Run Test" with no credentials, open the Settings modal as an overlay — **do not navigate away**. When the modal is closed, the user is exactly where they were with photo and settings intact.
+
+```
+┌──────────────────────────────────────────────────┐
+│ Upload a photo to test your filter               │
+│                                                  │
+│     [Drag & drop, click, or paste a photo]      │
+│                                                  │
+│ [Run Test ▶]   (enabled once prompt + model set)│
+└──────────────────────────────────────────────────┘
+```
+
+**Loading state during transform (15–40 seconds typical):**
+
+| Time | What the user sees |
+|---|---|
+| 0–1s | "Run Test" button changes to spinner + "Starting…" |
+| 1s+ | Animated progress bar (indeterminate) + "Transforms usually take 15–30 seconds…" |
+| 45s | Message updates to "Still working — complex transforms can take up to a minute…" |
+| 90s | Shows: "This is taking longer than usual." + **[Cancel]** button + **[Keep waiting]** button |
+| 120s | Auto-cancel: "The transform timed out. Check your connection and try again." + **[Retry]** button |
+
+**Cancel behavior:** Uses `AbortController` to cancel the fetch. The photo and all settings remain exactly as they were. The user can adjust the prompt or parameters and retry immediately.
+
+**No credentials state:**
+```
+┌──────────────────────────────────────────────────┐
+│ ⚠️  You need a Cloudflare API key to run tests  │
+│     (Demo mode doesn't support the builder)     │
+│                     [Add your key — 2 minutes →]│
+└──────────────────────────────────────────────────┘
+```
+"Add your key" opens the S0 setup wizard as a **modal overlay** — the build page stays loaded underneath.
+
+**After successful test:**
+- Before/after side-by-side comparison with a drag handle
+- "Adjust and rerun" — change sliders/prompt, click Run Test again
+- Section 4 marked complete → Section 6 (Share) becomes active
+
+---
+
+**Section 5 — Name and Describe**
+- Filter name (max 40 chars, required to share)
+- Short description (max 120 chars)
+- Category picker (15 categories matching the filter catalog)
+- Tags input (comma-separated, max 8 tags)
+
+---
+
+**Section 6 — Share Your Filter**
+
+Grayed out with message "Run a test first to generate a shareable result" until Section 4 has been successfully run at least once.
+
+Once active:
+- "Share Filter" button → generates: `photofilters.gic.mx/try.html?custom={base64_encoded_filter_json}`
+- Copy link button
+- Native Share button (`navigator.share()` where supported)
+- QR code (generated client-side)
+- Note: "Anyone with this link can use your filter — they'll need their own Cloudflare key or can use demo mode."
+- Future: `POST /api/filters/publish` for server-stored filters (Phase L)
+
+---
+
+#### S5.2 — Add Build Nav Item
+
+In `site.mjs renderHeader()`, add "Build" to the primary nav between "Browse" and "About".
+
+#### S5.3 — URL-Based Custom Filter Sharing
+
+Support `try.html?custom={base64_encoded_filter_json}` that loads a custom filter definition directly into the try page. The JSON payload:
 
 ```json
 {
-  "generatedAt": "2026-03-11T12:00:00Z",
-  "totalFilters": 205,
-  "dailyFreeNeurons": 10000,
-  "models": {
-    "flux2-klein-9b": {
-      "id": "@cf/black-forest-labs/flux-2-klein-9b",
-      "name": "FLUX.2 Klein 9B",
-      "neuronsPerRun": 150,
-      "supportsImg2Img": true,
-      "supportsInpainting": false
-    },
-    "sd15-img2img": {
-      "id": "@cf/stabilityai/stable-diffusion-v1-5-img2img",
-      "name": "Stable Diffusion v1.5 Img2Img",
-      "neuronsPerRun": 100,
-      "supportsImg2Img": true,
-      "supportsInpainting": false
-    },
-    "sd15-inpainting": {
-      "id": "@cf/stabilityai/stable-diffusion-v1-5-inpainting",
-      "name": "Stable Diffusion v1.5 Inpainting",
-      "neuronsPerRun": 120,
-      "supportsImg2Img": false,
-      "supportsInpainting": true
-    },
-    "client-side": {
-      "id": "client-side",
-      "name": "Browser (no AI)",
-      "neuronsPerRun": 0,
-      "supportsImg2Img": false,
-      "supportsInpainting": false
-    }
-  },
-  "filters": [
-    {
-      "id": "grinch_ify--holiday_seasonal",
-      "name": "Grinch-ify",
-      "slug": "grinch-ify",
-      "category": "holiday_seasonal",
-      "categoryDisplay": "Holiday & Seasonal",
-      "description": "Transform yourself into the Grinch! Green fur, mischievous grin, and all.",
-      "systemImage": "theatermasks.fill",
-      "prompt": "Transform this person into a green furry Grinch character with green fur skin, mischievous grin, wearing a Santa hat, photorealistic, high detail, festive background",
-      "negativePrompt": "blurry, low quality, deformed, extra limbs",
-      "type": "img2img",
-      "model": "flux2-klein-9b",
-      "strength": 0.65,
-      "guidance": 7.5,
-      "outputWidth": 768,
-      "outputHeight": 768,
-      "variantCount": 2,
-      "isDemoFilter": true,
-      "isSeasonalHighlight": true,
-      "seasonalMonths": [11, 12, 1],
-      "requiresAI": true,
-      "clientSideOnly": false,
-      "estimatedNeurons": 150,
-      "tags": ["christmas", "holiday", "fun", "grinch", "green"],
-      "shareText": "I just Grinch-ified myself! 💚🎄 Try it free:",
-      "helpPath": "holiday_seasonal/grinch_ify_help.md",
-      "workerScriptName": "photo_transform",
-      "scriptPath": "workers/photo_transform.js"
-    }
-  ]
+  "name": "My Filter",
+  "prompt": "Transform into a watercolor painting...",
+  "negativePrompt": "blurry, low quality",
+  "model": "flux2-klein-9b",
+  "strength": 0.75,
+  "guidance": 7.5,
+  "width": 768,
+  "height": 768
 }
 ```
 
-### Key Schema Additions vs. apps-index.json
-
-- **`prompt` / `negativePrompt`**: The baked-in creative prompt — users never see or edit this
-- **`type`**: `img2img` | `inpainting` | `style-transfer` | `utility` | `overlay`
-- **`model`**: Which Workers AI model to use
-- **`strength` / `guidance`**: Model parameters per filter
-- **`variantCount`**: How many variants to generate (1-4)
-- **`isDemoFilter`**: Whether GIC provides its own API key for free demo use
-- **`isSeasonalHighlight`**: Whether this filter is promoted during certain months
-- **`seasonalMonths`**: Array of months (1-12) when this filter is highlighted
-- **`estimatedNeurons`**: Estimated Neuron cost per run
-- **`shareText`**: Pre-written share text for social media
-- **`clientSideOnly`**: `true` for effects that run entirely in the browser
+No server-side storage needed for v1 — the entire filter definition lives in the URL.
 
 ---
 
-## 7. Repository Structure
+### iOS App: Filter Builder Tab
+
+#### S5.4 — Add "Build" Tab
+
+Add a third tab to `ContentView.swift`'s `TabView` (between Gallery and Settings):
+- Tab icon: `wand.and.stars`
+- Tab label: "Build"
+
+#### S5.5 — Create `FilterBuilderView.swift`
+
+A `ScrollView` with the same 6-section layout as the website, using the card-based style from S2. All sections visible at once (scrollable, not wizard).
+
+1. **Prompt card** — `TextEditor` for prompt + collapsible negative prompt, character counters
+2. **Model card** — Same picker as S2.3, displayed as a segmented control or button grid
+3. **Parameters card** — Sliders for strength, guidance; segmented control for dimensions
+4. **Test card**:
+   - Photo picker button + image preview
+   - "Run Test" button (enabled once prompt + model are set)
+   - **Loading state** (mirrors website):
+     - Immediately: button disabled, spinner shown
+     - After 1s: `ProgressView(style: .linear)` + "Usually takes 15–30 seconds…"
+     - After 45s: "Still working…"
+     - After 90s: Alert with Cancel / Keep Waiting options
+     - After 120s: Auto-cancel with retry prompt
+   - **No credentials**: show inline banner + "Set up Cloudflare" button that opens the S0 wizard as a `.sheet()` — the builder view stays in memory, photo and all settings preserved
+   - Before/after comparison with `GeometryReader` + drag gesture after successful test
+5. **Details card** — Name, description, category picker (`Picker`), tags
+6. **Share card** — Disabled until at least one test has succeeded; shows share sheet with deep link URL and web URL
+
+#### S5.6 — Create `FilterPublisherService.swift`
+
+Service that:
+- Encodes the custom filter definition as JSON → base64
+- Generates a `gicphotofilters://build?filter={base64}` deep link for in-app sharing
+- Generates a web URL: `photofilters.gic.mx/try.html?custom={base64}`
+- Future: calls `POST /api/filters/publish` when the server endpoint exists
+
+---
+
+## S6 — Before/After Sample Photos: AI-Generated Portrait
+
+### Problem
+
+Every filter card on the site and in the app shows zero visual content. We need before/after examples for filters without spending the full neuron budget at once.
+
+### Strategy
+
+Generate **1 base portrait** (`portrait_a`). Use it to generate **1 before/after pair per filter**, starting with the 20 most popular/featured filters, then generating the remaining 185 over time using the free daily allotment (~200 neurons/run, leaving headroom for demos).
+
+### Tasks
+
+#### S6.1 — Generate 1 Base Portrait Image
+
+Use the installed Gemini CLI to generate **one clearly fictional AI portrait image** to use as the base "before" photo for all filter previews.
+
+| ID | Description | Pose / Framing |
+|---|---|---|
+| `portrait_a` | Young adult, warm brown skin, short natural hair, neutral expression | Forward-facing, shoulders up, clean grey studio background |
+
+**Specs:** 1024×1024, JPEG, clearly AI-generated/fictional.
+**Output:** `docs/assets/sample-photos/portrait_a.jpg`
+
+#### S6.2 — Create a Resumable Before/After Generation Script
+
+Create `scripts/generate-previews.js` that:
+
+1. Reads `docs/filters-index.json` for all 205 filter definitions
+2. Accepts a `--batch` flag: `node generate-previews.js --batch 20` to limit the run to N filters
+3. For each filter (starting with the `featured: true` ones first, then alphabetical):
+   - Calls `POST https://photofilters.gic.mx/api/transform` with:
+     - Headers: `X-CF-Account-ID` and `X-CF-API-Token` from env vars (`CF_ACCOUNT_ID`, `CF_API_TOKEN`)
+     - Body: `portrait_a.jpg` resized to 512×512, plus the filter's prompt/model/strength/guidance
+   - Saves result as `docs/assets/filter-previews/{filter_slug}_after.webp` (400×400, WebP quality 80)
+   - Copies the resized input as `{filter_slug}_before.webp`
+4. For client-side canvas effects: applies the effect using Node.js `canvas` and saves — no API call needed
+5. **Resumable:** skips filters that already have both `_before.webp` and `_after.webp`
+6. **Rate limiting:** 2-second delay between API calls; stops if it receives a 429
+7. **Daily budget:** stops after 150 API calls per run (leaves buffer for demo traffic)
+8. Progress log: `[12/205] grinch-ify ✓  |  [13/205] santa-claus … timed out, skipping`
+
+**Run daily** (manual or cron) until all 205 filters have previews.
+
+#### S6.3 — Wire Preview Images to Filter Cards
+
+**Website:** In `site.mjs`, update `renderFilterCard()` to show `previewImages[0].after` as the card thumbnail, with hover-swap to `previewImages[0].before`. If no preview exists, show a gradient placeholder with the filter's category color.
+
+**App:** In `FilterDetailView.swift`, use `AsyncImage` to load the after-image thumbnail. In the detail view, show a swipeable before/after comparison.
+
+---
+
+## Dependency Graph
 
 ```
-gicPhotoFilters/
-├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   │   └── request-a-filter.md
-│   └── FUNDING.yml
-├── docs/                                # Static site assets
-│   ├── assets/
-│   │   ├── social-preview.png
-│   │   ├── sample-photos/              # Demo input photos for previews
-│   │   └── filter-previews/            # Before/after thumbnails per filter
-│   ├── filters-index.json              # Central manifest
-│   ├── filters-index.json.gz           # Compressed for app download
-│   └── last_updated.txt
-├── workers/                            # Cloudflare Worker scripts
-│   ├── photo_transform.js             # Main AI transform worker
-│   ├── photo_transform_inpaint.js     # Inpainting variant
-│   └── client_effects.js              # Client-side effects bundle
-├── categories/                        # SEO category pages
-│   ├── index.html
-│   ├── holiday-seasonal.html
-│   ├── pop-culture.html
-│   ├── artistic-styles.html
-│   ├── retro-vintage.html
-│   ├── life-events.html
-│   ├── pets-animals.html
-│   ├── professional.html
-│   ├── travel-places.html
-│   ├── utility-tools.html
-│   ├── fun-meme.html
-│   ├── effects-filters.html
-│   ├── social-media.html
-│   ├── food-drink.html
-│   ├── sports-fitness.html
-│   └── fantasy-scifi.html
-├── holiday_seasonal/                  # One folder per category
-│   ├── meta.yaml
-│   ├── grinch_ify.json               # Filter manifest
-│   ├── grinch_ify_help.md
-│   ├── santa_claus.json
-│   ├── santa_claus_help.md
-│   └── ...
-├── pop_culture/
-│   ├── meta.yaml
-│   └── ...
-├── artistic_styles/
-│   └── ...
-├── retro_vintage/
-│   └── ...
-├── life_events/
-│   └── ...
-├── pets_animals/
-│   └── ...
-├── professional/
-│   └── ...
-├── travel_places/
-│   └── ...
-├── utility_tools/
-│   └── ...
-├── fun_meme/
-│   └── ...
-├── effects_filters/
-│   └── ...
-├── social_media/
-│   └── ...
-├── food_drink/
-│   └── ...
-├── sports_fitness/
-│   └── ...
-├── fantasy_scifi/
-│   └── ...
-├── scripts/
-│   ├── generate_index.js              # Builds filters-index.json
-│   ├── generate_categories.js         # Builds category HTML pages
-│   └── generate_previews.js           # Generates before/after thumbnails
-├── functions/                         # Cloudflare Pages Functions
-│   └── api/
-│       ├── transform.js               # POST /api/transform — main AI endpoint
-│       ├── status.js                   # GET /api/status/:jobId — job polling
-│       ├── usage.js                    # GET /api/usage — daily Neuron usage
-│       └── upload.js                   # POST /api/upload — R2 temp image upload
-├── about.html
-├── contact.html
-├── privacy.html
-├── terms.html
-├── index.html                         # Homepage
-├── browse.html                        # Browse/search all filters
-├── try.html                           # Live photo transform page
-├── robots.txt
-├── sitemap.xml
-├── wrangler.toml                      # Cloudflare Workers/Pages config
-├── README.md
-├── LICENSE-CODE                       # MIT
-├── PRD.md                             # This file
-├── CNAME                              # gicPhotoFilters.gic.mx (if needed)
-└── .gitignore
+S0 (Setup Wizard) ──► S4 (BYOK Settings) ──► S5 (Custom Builder)
+                             │
+S1 (Entitlements) ──► S2 (Settings Redesign) ──► S3 (Error Messages + Previews)
+                                                        │
+S6 (Portrait + Script) ─────────────────────────► S3 (needs photos for previews)
+                                                   S5 (portrait available for builder testing)
 ```
 
----
+**Recommended execution order:**
 
-## 8. `wrangler.toml` Configuration
-
-```toml
-name = "gic-photo-filters"
-compatibility_date = "2026-03-01"
-pages_build_output_dir = "./"
-
-[ai]
-binding = "AI"
-
-[[r2_buckets]]
-binding = "PHOTO_BUCKET"
-bucket_name = "gic-photo-filters-temp"
-
-[[kv_namespaces]]
-binding = "USAGE_KV"
-id = "..."        # Tracks daily Neuron usage per IP
-
-[vars]
-DEMO_MODE = "true"
-MAX_FREE_NEURONS_PER_DAY = "10000"
-MAX_FREE_TRANSFORMS_PER_IP = "10"
-SEASONAL_FILTER = "grinch_ify"
-```
-
----
-
-## 9. Worker Architecture: `/api/transform`
-
-The single most important backend endpoint. Handles all photo transformations.
-
-```javascript
-// functions/api/transform.js (Cloudflare Pages Function)
-export async function onRequestPost(context) {
-  const { request, env } = context;
-  
-  // 1. Rate limit check (per-IP daily usage)
-  const ip = request.headers.get('CF-Connecting-IP');
-  const today = new Date().toISOString().slice(0, 10);
-  const usageKey = `${ip}:${today}`;
-  const currentUsage = parseInt(await env.USAGE_KV.get(usageKey) || '0');
-  
-  if (currentUsage >= parseInt(env.MAX_FREE_TRANSFORMS_PER_IP)) {
-    return new Response(JSON.stringify({
-      error: 'daily_limit',
-      message: 'Free daily limit reached. Get the app for unlimited transforms!',
-      used: currentUsage,
-      limit: parseInt(env.MAX_FREE_TRANSFORMS_PER_IP)
-    }), { status: 429 });
-  }
-  
-  // 2. Parse request
-  const formData = await request.formData();
-  const imageFile = formData.get('image');
-  const filterId = formData.get('filterId');
-  const userApiKey = formData.get('apiKey'); // Optional: user's own key
-  
-  // 3. Load filter manifest
-  const filter = await getFilterManifest(filterId, env);
-  
-  // 4. Check if demo filter or user has own key
-  const isDemo = filter.isDemoFilter && !userApiKey;
-  
-  // 5. Prepare image bytes
-  const imageBytes = new Uint8Array(await imageFile.arrayBuffer());
-  
-  // 6. Route to correct model
-  let result;
-  switch (filter.type) {
-    case 'img2img':
-      result = await env.AI.run(filter.modelId, {
-        prompt: filter.prompt,
-        negative_prompt: filter.negativePrompt,
-        image: [...imageBytes],
-        strength: filter.strength,
-        guidance: filter.guidance,
-        width: filter.outputWidth,
-        height: filter.outputHeight
-      });
-      break;
-    case 'inpainting':
-      result = await env.AI.run(filter.modelId, {
-        prompt: filter.prompt,
-        image: [...imageBytes],
-        mask: [...generateMask(filter)], // Auto-generated mask
-        guidance: filter.guidance
-      });
-      break;
-  }
-  
-  // 7. Store result in R2 (24h TTL)
-  const outputKey = `out/${crypto.randomUUID()}.png`;
-  await env.PHOTO_BUCKET.put(outputKey, result, {
-    httpMetadata: { contentType: 'image/png' },
-    customMetadata: { expiresAt: new Date(Date.now() + 86400000).toISOString() }
-  });
-  
-  // 8. Track usage
-  await env.USAGE_KV.put(usageKey, String(currentUsage + 1), {
-    expirationTtl: 86400
-  });
-  
-  // 9. Return result URL
-  return new Response(JSON.stringify({
-    resultUrl: `/api/image/${outputKey}`,
-    neuronsUsed: filter.estimatedNeurons,
-    dailyUsage: currentUsage + 1,
-    dailyLimit: parseInt(env.MAX_FREE_TRANSFORMS_PER_IP)
-  }));
-}
-```
-
----
-
-## 10. Neuron/Usage Tracking System
-
-### Free Tier (Website Demo)
-- **10,000 Neurons/day** from Cloudflare's free allowance
-- **10 transforms/day per IP** (rate limited)
-- Usage counter shown in the UI: "3/10 free transforms used today"
-- GIC's own API key powers demo filters
-- Client-side filters (Effects category) are **unlimited** — no Neurons consumed
-
-### Paid Tier (Via App — User's Own Key)
-- User enters their own Cloudflare API token in the app
-- Transforms run against their Cloudflare account
-- App tracks their personal Neuron usage via the Cloudflare API
-- No per-IP limits; only Cloudflare's own billing limits apply
-
-### Seasonal/Featured Demo
-- GIC funds a "Filter of the Season" with higher daily limits
-- E.g., "Grinch-ify" in December gets 50 transforms/day from GIC's key
-- Featured prominently on homepage with "Try it FREE" badge
-
----
-
-## 11. Detailed Task List
-
-### Phase 0 — Repository & Infrastructure Setup
-
-- [ ] **0.1** Initialize `gicPhotoFilters` Git repo with `.gitignore`, `README.md`, `LICENSE-CODE` (MIT).
-- [ ] **0.2** Create `wrangler.toml` with AI binding, R2 bucket, KV namespace.
-- [ ] **0.3** Set up Cloudflare Pages project linked to the repo.
-- [ ] **0.4** Create R2 bucket `gic-photo-filters-temp` with lifecycle rule (auto-delete after 24h).
-- [ ] **0.5** Create KV namespace for usage tracking.
-- [ ] **0.6** Set up DNS record for `gicPhotoFilters.gic.mx` → Cloudflare Pages.
-- [ ] **0.7** Create the full folder structure (all 15 category folders, `workers/`, `functions/api/`, `scripts/`, `docs/`, `categories/`).
-- [ ] **0.8** Add `.github/ISSUE_TEMPLATE/request-a-filter.md`.
-- [ ] **0.9** Add `.github/FUNDING.yml`.
-
-### Phase 1 — Filter Manifest Content Creation
-
-- [ ] **1.1** Create the 15 `meta.yaml` files (one per category folder):
-  ```yaml
-  name: "Holiday & Seasonal"
-  slug: "holiday_seasonal"
-  description: "Festive photo transformations for every holiday and season."
-  icon: "gift.fill"
-  emoji: "🎄"
-  filterCount: 25
-  ```
-- [ ] **1.2** Create all 205 individual filter `.json` manifest files in their category folders. Each contains:
-  ```json
-  {
-    "id": "grinch_ify--holiday_seasonal",
-    "name": "Grinch-ify",
-    "slug": "grinch-ify",
-    "prompt": "Transform this person into a green furry Grinch...",
-    "negativePrompt": "blurry, low quality, deformed...",
-    "type": "img2img",
-    "model": "flux2-klein-9b",
-    "strength": 0.65,
-    "guidance": 7.5,
-    "outputWidth": 768,
-    "outputHeight": 768,
-    "variantCount": 2,
-    "isDemoFilter": true,
-    "isSeasonalHighlight": true,
-    "seasonalMonths": [11, 12, 1],
-    "tags": ["christmas", "holiday", "fun", "grinch"]
-  }
-  ```
-- [ ] **1.3** Create all 205 `_help.md` files with:
-  - What the filter does
-  - Before/after description
-  - Tips for best results (lighting, face angle, resolution)
-  - Share text template
-- [ ] **1.4** Curate the ~30 "demo filters" that GIC will provide free API key access for:
-  - Top 2-3 from each category
-  - All 10 client-side Effects filters (free by default)
-  - Current seasonal highlight
-- [ ] **1.5** Audit: verify all 205 filters have valid manifests + help docs.
-
-### Phase 2 — Index Generation Pipeline
-
-- [ ] **2.1** Write `scripts/generate_index.js`:
-  - Walk all 15 category folders
-  - Read each `.json` filter manifest + `meta.yaml`
-  - Build `filters-index.json` with the schema from §6
-  - Generate `filters-index.json.gz`
-  - Write `last_updated.txt`
-- [ ] **2.2** Write `scripts/generate_previews.js`:
-  - For each filter, generate a before/after thumbnail pair
-  - Store in `docs/assets/filter-previews/{filter_slug}_before.jpg` and `_after.jpg`
-  - Use a set of 5-6 sample photos as input
-- [ ] **2.3** Document the pipeline in `LOCAL_PIPELINE.md`.
-- [ ] **2.4** Run pipeline, verify `filters-index.json` contains all 205 entries.
-
-### Phase 3 — Core Worker (AI Transform Endpoint)
-
-- [ ] **3.1** Write `functions/api/transform.js` (see §9):
-  - Accept `image` (File) + `filterId` (string) + optional `apiKey` (string)
-  - Load filter manifest, route to correct model
-  - Return result URL + usage stats
-- [ ] **3.2** Write `functions/api/upload.js`:
-  - Accept image upload, store in R2, return temp key
-  - Validate image format (JPEG, PNG, WebP) and size (max 5MB)
-  - Resize to max 1024px before AI inference
-- [ ] **3.3** Write `functions/api/status.js`:
-  - For async/long-running transforms, poll job status
-- [ ] **3.4** Write `functions/api/usage.js`:
-  - Return current daily usage for the requesting IP
-  - `{ used: 3, limit: 10, neuronsUsed: 450, neuronsLimit: 10000 }`
-- [ ] **3.5** Write `functions/api/image/[key].js`:
-  - Serve transformed images from R2
-  - Add Cache-Control headers
-- [ ] **3.6** Write `workers/client_effects.js`:
-  - Bundle of client-side Canvas effects (sepia, B&W, vignette, etc.)
-  - Runs entirely in browser, no API call needed
-- [ ] **3.7** Test all endpoints locally with `wrangler pages dev`.
-
-### Phase 4 — Homepage (`index.html`)
-
-Replicate the `forms.gic.mx/index.html` structure, adapted for photo filters:
-
-- [ ] **4.1** Sticky header with logo ("GIC Photo Filters"), nav (Browse, Try, Categories, Get App), dark mode toggle.
-- [ ] **4.2** Hero section:
-  - Badge: "AI-Powered Photo Transformations"
-  - H1: "200+ Fun Photo Filters — Transform Yourself in Seconds"
-  - Subtitle: "Turn into the Grinch, travel to Paris, get a professional headshot — all from one photo. Free to try, powered by AI."
-  - CTA buttons: "Try a Filter" + "Get the App"
-  - Stats row: 205 Filters / 15 Categories / Free to Try
-  - Interactive before/after slider showing the "Filter of the Season"
-- [ ] **4.3** "How It Works" section (3 steps):
-  1. Upload Your Photo
-  2. Pick a Filter (browse 200+ transformations)
-  3. Download & Share (transformed image ready in seconds)
-- [ ] **4.4** Seasonal Highlights section:
-  - Dynamic: shows filters matching current month's `seasonalMonths`
-  - Grid of 4-6 seasonal filter cards with before/after thumbnails
-  - "Try Now — FREE" buttons
-- [ ] **4.5** Category Highlights: top 6 categories as cards with emoji, name, filter count, sample before/after.
-- [ ] **4.6** "Popular Filters" carousel: top 10 most-used filters (from analytics or curated).
-- [ ] **4.7** App Suite section: card for `gicPhotoFiltersApp` with App Store link.
-- [ ] **4.8** CTA section: "Upload a Photo, Pick a Filter, Share the Fun" with Try button.
-- [ ] **4.9** Footer: matching GIC footer (Browse, GIC Apps, Legal, disclaimer).
-- [ ] **4.10** Script block: load `filters-index.json`, populate seasonal + stats dynamically.
-- [ ] **4.11** Dark mode support (same `gic-theme` localStorage key).
-
-### Phase 5 — Browse Page (`browse.html`)
-
-- [ ] **5.1** Search bar: full-text across filter name, description, tags, category.
-- [ ] **5.2** Sidebar filters:
-  - **Category**: 15 categories with filter counts
-  - **Type**: img2img / inpainting / style-transfer / utility / overlay
-  - **AI Required**: Yes / No (client-side) / All
-  - **Demo Available**: Yes / No — shows which filters can be tried for free
-  - **Seasonal**: Show only current-season filters
-  - **Model**: FLUX / Stable Diffusion / Client-Side
-- [ ] **5.3** Filter card grid:
-  - Each card: before/after thumbnail (hover to swap), filter name, category badge, "FREE" badge if demo, "Try" + "Details" links
-  - Cards link to `try.html?id={filter_id}`
-- [ ] **5.4** Sort: Popular / A-Z / Category / Newest
-- [ ] **5.5** URL hash state: `browse.html#category=holiday_seasonal&type=img2img`
-- [ ] **5.6** "No results" state with filter request CTA.
-- [ ] **5.7** Loading skeleton animation.
-
-### Phase 6 — Try Page (`try.html`) — KEY DIFFERENTIATOR
-
-This is the core experience. Users upload a photo and get it transformed **live in the browser**:
-
-- [ ] **6.1** Load filter metadata from `filters-index.json` based on `?id=` param. If no param, show "Pick a Filter" with popular grid.
-- [ ] **6.2** Filter info header: name, category badge, description, type badge, "FREE" badge, Neuron cost estimate.
-- [ ] **6.3** Upload panel:
-  - Drag-and-drop or click to upload
-  - Camera capture on mobile
-  - Paste from clipboard
-  - Validate: JPEG/PNG/WebP, max 5MB
-  - Client-side resize to max 1024px before upload
-  - Face detection hint: "For best results, use a clear face photo"
-- [ ] **6.4** Transform button:
-  - If demo filter: "Transform — FREE ✨" (uses GIC's key)
-  - If not demo: "Transform (uses your API key)" or "Get the App to try this filter"
-  - Show daily usage counter: "3/10 free transforms today"
-- [ ] **6.5** Loading state:
-  - Progress indicator with fun messages ("Mixing the green paint...", "Adding the fur...")
-  - Estimated time based on model
-- [ ] **6.6** Result display:
-  - Side-by-side or before/after slider (original vs. transformed)
-  - If `variantCount > 1`: swipe between variants (Tinder-style cards)
-  - "Download" button (PNG)
-  - "Share" button with pre-filled text from `shareText`
-  - "Try Another Photo" button
-  - "Try Another Filter" button
-- [ ] **6.7** Client-side filters (Effects category):
-  - Run entirely in Canvas, no API call
-  - Instant preview (< 100ms)
-  - Slider controls for effect intensity
-  - No daily limit
-- [ ] **6.8** Usage dashboard (collapsible):
-  - "Today: 3/10 free transforms used"
-  - "Neurons: 450/10,000 used today"
-  - "Get the app for unlimited transforms"
-- [ ] **6.9** Help tab: render the filter's `_help.md` as formatted text.
-- [ ] **6.10** Related filters section: 4-6 filters from same category.
-- [ ] **6.11** Schema.org `SoftwareApplication` structured data.
-- [ ] **6.12** Open Graph + Twitter Card with dynamic preview image.
-- [ ] **6.13** Breadcrumb: Home > Category > Filter Name.
-
-### Phase 7 — Category Pages (`categories/*.html`)
-
-- [ ] **7.1** Category index (`categories/index.html`): grid of all 15 categories with emoji, name, description, filter count, sample before/after.
-- [ ] **7.2** Individual category pages (15 pages): list all filters in that category as cards.
-  - Header: emoji + name, description from `meta.yaml`, filter count.
-  - Filter grid: same card component as browse, filtered to category.
-  - SEO: unique title + meta description + canonical.
-- [ ] **7.3** `scripts/generate_categories.js` to auto-generate from `filters-index.json` + `meta.yaml`.
-
-### Phase 8 — Static Pages
-
-- [ ] **8.1** `about.html` — About GIC Photo Filters, link to app, link to other GIC sites.
-- [ ] **8.2** `contact.html` — Contact + GitHub Issues link.
-- [ ] **8.3** `privacy.html` — Photos are processed by AI and deleted within 24h, no data retained. Client-side filters never leave the device.
-- [ ] **8.4** `terms.html` — Terms of service, fair use policy (10 transforms/day free).
-- [ ] **8.5** `robots.txt` + `sitemap.xml`.
-
-### Phase 9 — iOS/macOS App (`gicPhotoFiltersApp`)
-
-Build the companion app, based on `oneTimeUseWebApp`'s architecture:
-
-- [ ] **9.1** Create Xcode project `gicPhotoFiltersApp` (SwiftUI, iOS 17+ / macOS 14+).
-- [ ] **9.2** Core models:
-  ```swift
-  struct PhotoFilter: Codable, Identifiable {
-      let id: String
-      let name: String
-      let slug: String
-      let category: String
-      let categoryDisplay: String
-      let description: String
-      let systemImage: String
-      let prompt: String
-      let negativePrompt: String
-      let type: FilterType  // img2img, inpainting, style-transfer, utility, overlay
-      let model: String
-      let strength: Double
-      let guidance: Double
-      let outputWidth: Int
-      let outputHeight: Int
-      let variantCount: Int
-      let isDemoFilter: Bool
-      let isSeasonalHighlight: Bool
-      let seasonalMonths: [Int]
-      let requiresAI: Bool
-      let clientSideOnly: Bool
-      let estimatedNeurons: Int
-      let tags: [String]
-      let shareText: String
-  }
-  
-  enum FilterType: String, Codable {
-      case img2img, inpainting, styleTransfer = "style-transfer", utility, overlay
-  }
-  ```
-- [ ] **9.3** `FilterGalleryView` — browse filters by category with search. Mirrors `TemplateGalleryView` from `oneTimeUseWebApp`.
-- [ ] **9.4** `FilterDetailView` — shows filter info, before/after preview, "Transform" CTA.
-- [ ] **9.5** `CameraView` — photo picker + camera capture for the input photo.
-- [ ] **9.6** `TransformView` — sends photo to Workers AI, shows progress, displays results.
-- [ ] **9.7** `ResultView` — before/after slider, variant swipe, download, share sheet, QR code.
-- [ ] **9.8** `SettingsView` — Cloudflare API token entry, model preferences, usage tracking.
-- [ ] **9.9** `RemoteFilterSync` service:
-  - Fetch `filters-index.json.gz` from `gicPhotoFilters.gic.mx/docs/filters-index.json.gz`
-  - Compare `generatedAt`, download if newer
-  - Fallback to bundled `filters-index.json`
-- [ ] **9.10** `UsageTracker`:
-  - Track daily Neuron usage against user's Cloudflare account
-  - Show usage dashboard in settings
-  - For free tier: track demo transforms used
-- [ ] **9.11** Keychain storage for Cloudflare API token.
-- [ ] **9.12** Deep-link support: `gicphotofilters://filter/{filter_id}`.
-- [ ] **9.13** "Open on Web" button that links to `gicPhotoFilters.gic.mx/try.html?id={filter_id}`.
-- [ ] **9.14** App Store metadata + screenshots.
-
-### Phase 10 — SEO & Analytics
-
-- [ ] **10.1** Create GA4 property for `gicPhotoFilters.gic.mx`.
-- [ ] **10.2** Add GA4 to all pages.
-- [ ] **10.3** Track custom events:
-  - `filter_view` (try page load)
-  - `filter_transform` (transform initiated)
-  - `filter_download` (result downloaded)
-  - `filter_share` (share button clicked)
-  - `category_browse` (category page view)
-  - `search` (browse search query)
-  - `daily_limit_reached` (user hit free limit)
-  - `app_store_click` (app download CTA)
-- [ ] **10.4** Schema.org structured data on all pages.
-- [ ] **10.5** Open Graph + Twitter Card meta tags.
-- [ ] **10.6** Submit sitemap to Google Search Console.
-- [ ] **10.7** Canonical URLs.
-
-### Phase 11 — Cross-Promotion & Ecosystem Links
-
-- [ ] **11.1** Add "Photo Filters" link in `forms.gic.mx` footer.
-- [ ] **11.2** Add "Photo Filters" link in `onePageApps.gic.mx` footer.
-- [ ] **11.3** Add "Forms" + "One-Page Apps" links in `gicPhotoFilters.gic.mx` footer.
-- [ ] **11.4** Update `gic.mx` product ecosystem.
-- [ ] **11.5** Cross-promote seasonal filters in the other GIC apps.
-
-### Phase 12 — Launch Checklist
-
-- [ ] **12.1** Verify HTTPS + custom domain working on Cloudflare Pages.
-- [ ] **12.2** Verify all 205 filters appear in browse page with correct metadata.
-- [ ] **12.3** Test 5+ demo filters end-to-end (upload → transform → download).
-- [ ] **12.4** Test 3+ client-side effects (instant, no API call).
-- [ ] **12.5** Verify rate limiting works (10 transforms/day per IP).
-- [ ] **12.6** Verify usage tracking shows correct Neuron counts.
-- [ ] **12.7** Verify `filters-index.json` is accessible and parseable.
-- [ ] **12.8** Verify iOS app can download and parse `filters-index.json`.
-- [ ] **12.9** Lighthouse audit: Performance ≥ 85, Accessibility ≥ 90, SEO ≥ 90.
-- [ ] **12.10** Test dark mode on all pages.
-- [ ] **12.11** Test mobile responsiveness (upload, transform, result all work on phone).
-- [ ] **12.12** Verify R2 auto-cleanup (images deleted after 24h).
-- [ ] **12.13** Verify seasonal filter rotation works correctly.
-- [ ] **12.14** Test error states (API down, daily limit, invalid image, oversized file).
-
----
-
-## 12. Implementation Priority
-
-| Priority | Phase | Effort | Impact |
+| Order | Stream | Effort | Blocks |
 |---|---|---|---|
-| 🔴 P0 | Phase 0 — Repo + infra setup | 1 day | Foundation |
-| 🔴 P0 | Phase 1 — Filter manifests (start with 50) | 3 days | Content |
-| 🔴 P0 | Phase 2 — Index pipeline | 1 day | Core pipeline |
-| 🔴 P0 | Phase 3 — AI transform worker | 3 days | Core backend |
-| 🔴 P0 | Phase 4 — Homepage | 2 days | Public face |
-| 🔴 P0 | Phase 5 — Browse page | 2 days | Discovery |
-| 🟡 P1 | Phase 6 — Try page | 4 days | **Key differentiator** |
-| 🟡 P1 | Phase 7 — Category pages | 1 day | SEO |
-| 🟡 P1 | Phase 8 — Static pages | 1 day | Legal/info |
-| 🟡 P1 | Phase 9 — iOS app | 5 days | Ecosystem |
-| 🟢 P2 | Phase 10 — SEO & analytics | 1 day | Growth |
-| 🟢 P2 | Phase 11 — Cross-promotion | 0.5 day | Ecosystem |
-| 🟢 P2 | Phase 12 — Launch checklist | 1 day | QA |
+| 1 | S1 — Entitlements fix | 30 min | Everything in the iOS app |
+| 2 | S0 — Setup wizard (website + app) | 1 day | S4 and S5 usability |
+| 3 | S2 — Card-based Settings + `/api/health` endpoint | 1 day | S3 previews need settings working |
+| 4 | S4 — Website BYOK Settings + proxy security update | 1 day | S5 builder needs credentials |
+| 5 | S6 — Generate portrait + preview script (first 20 filters) | 0.5 day | S3 and S5 testing |
+| 6 | S3 — Error messages + before/after previews | 1 day | — |
+| 7 | S5 — Custom Filter Builder | 3 days | — |
 
-**Total estimated effort:** ~25 days
+**Total estimated effort: ~8 days**
 
 ---
 
-## 13. Model Selection Strategy
+## What's Already Done (No Work Needed)
 
-### Primary: Cloudflare Workers AI (Free Tier)
+- ✅ Static site: homepage, browse, try, 15 category pages, about, contact, privacy, terms
+- ✅ `filters-index.json` with 205 filters live at `photofilters.gic.mx/docs/filters-index.json`
+- ✅ 5 Cloudflare Functions: transform, upload, status, usage, image serving
+- ✅ `assets/effects.js` — 16 client-side Canvas effects
+- ✅ iOS app: gallery, filter detail, transform composer, result view, keychain, deep links
+- ✅ GA4, Schema.org, OG/Twitter tags
+- ✅ Domain fix: `photofilters.gic.mx` (was `gicPhotoFilters.gic.mx`) — corrected in all static files
+- ✅ Basic BYOK accordion on try page (Account ID + API Token fields)
+- ✅ Dark mode, responsive layout, loading skeletons
+- ✅ Live BYOK web transform flow
 
-| Model | Best For | Neurons/Run | Speed |
-|---|---|---|---|
-| **FLUX.2 Klein 9B** | High-quality img2img, character transforms | ~150 | Fast (2-5s) |
-| **FLUX.2 Klein 4B** | Lighter transforms, faster | ~80 | Very fast (1-3s) |
-| **SD v1.5 Img2Img** | Style transfers, basic transforms | ~100 | Medium (3-8s) |
-| **SD v1.5 Inpainting** | Targeted edits (add hat, change BG) | ~120 | Medium (3-8s) |
-| **SDXL Base 1.0** | Highest quality text-to-image | ~200 | Slower (5-15s) |
+## What's Deferred to After This Sprint
 
-### Fallback: External Providers (via Cloudflare AI Gateway)
-
-| Provider | Integration | Use Case | Cost |
-|---|---|---|---|
-| **Replicate** | Via AI Gateway proxy | InstantID, IP-Adapter (face preservation) | ~$0.01/run |
-| **fal.ai** | Via AI Gateway proxy | Fast FLUX variants, custom models | ~$0.005/run |
-
-### Provider Selection Logic
-
-```
-1. If filter.clientSideOnly → Canvas/MediaPipe (FREE, instant)
-2. If filter.model starts with "@cf/" → Workers AI (free tier Neurons)
-3. If filter.model == "replicate/*" → Replicate via AI Gateway (paid)
-4. If filter.model == "fal/*" → fal.ai via AI Gateway (paid)
-```
-
----
-
-## 14. Privacy & Security
-
-- **Photos are ephemeral**: Uploaded photos and results are stored in R2 for max 24 hours, then auto-deleted.
-- **Client-side effects** never leave the user's device.
-- **No user accounts**: No registration required. Usage tracked by IP only.
-- **API keys in app**: Stored in Keychain, never sent to GIC servers. Used directly against user's own Cloudflare account.
-- **Content moderation**: NSFW detection before AI processing (can use Cloudflare's built-in content moderation).
-- **No training**: User photos are NOT used for model training.
-- **GDPR/CCPA compliant**: No PII stored, photos auto-delete, clear privacy policy.
-
----
-
-## 15. Monetization Strategy
-
-| Tier | Access | Cost | Limits |
-|---|---|---|---|
-| **Free (Website)** | Demo filters + all client-side effects | Free | 10 transforms/day per IP |
-| **Free (App, own key)** | All 205 filters | User pays Cloudflare | Cloudflare's billing limits |
-| **GIC Seasonal** | "Filter of the Season" with boosted limits | GIC-funded | 50/day |
-| **Future: Premium Packs** | Exclusive filters, higher quality models | TBD | Unlimited |
-
----
-
-## 16. Success Metrics
-
-- Site live at `gicPhotoFilters.gic.mx` with all 205 filters browsable
-- `filters-index.json` publicly accessible and parseable by the iOS app
-- At least 30 "demo" filters work end-to-end on the website for free
-- All 10 client-side effects work instantly with no AI cost
-- iOS app syncs filter catalog from the site
-- Google indexes the site within 2 weeks
-- "Grinch-ify" or seasonal filter goes viral on social media
-- < 5s average transform time for FLUX.2 Klein models
-
----
-
-## 17. Future Work (Out of Scope for v1)
-
-- [ ] User-submitted filter prompts via PR template
-- [ ] Video transformations (AnimateDiff, Stable Video Diffusion)
-- [ ] Batch processing (transform multiple photos at once)
-- [ ] Before/after gallery wall (user-submitted, moderated)
-- [ ] Sticker/overlay packs (client-side, no AI, downloadable)
-- [ ] WhatsApp/iMessage sticker export
-- [ ] AR/live camera filters (ARKit on iOS)
-- [ ] Multi-face detection and individual face transforms
-- [ ] Text overlay templates ("Happy Birthday!", "Congratulations!")
-- [ ] Spanish/multi-language UI
-- [ ] Premium subscription tier
-- [ ] Cloudflare AI Gateway analytics dashboard
-- [ ] Custom filter builder (let users write their own prompts)
-- [ ] Integration with GIC Forms (photo transform as form question type)
+- Phase L from PRD.md — Server-side custom filter publishing (`POST /api/filters/publish`)
+- Phase M — App filter builder (full server-integrated version)
+- Phase N — Sticker packs & text overlays
+- Phase J — App Store metadata & screenshots
+- Phase K — Cross-promotion with other GIC sites
+- Phase O — Final launch QA checklist
+- S6 remaining portraits (portraits b–f) and multi-portrait per filter — generate over time as needed

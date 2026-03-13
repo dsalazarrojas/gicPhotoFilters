@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import gzip
 import hashlib
 import json
@@ -14,6 +15,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 PRD_PATH = ROOT / 'PRD.md'
+PRD_FALLBACK_PATHS = [
+    ROOT / 'PRD202603121254.md',
+]
 CONFIG_PATH = Path(__file__).resolve().with_name('catalog-config.json')
 OUTPUT_PATH = ROOT / 'docs' / 'filters-index.json'
 GZIP_OUTPUT_PATH = ROOT / 'docs' / 'filters-index.json.gz'
@@ -212,6 +216,20 @@ def parse_filter_sections(prd_text: str, category_summary: dict[str, dict[str, A
     return filters
 
 
+def load_prd_source() -> tuple[Path, str, dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    candidate_paths = [PRD_PATH, *PRD_FALLBACK_PATHS]
+    for path in candidate_paths:
+        if not path.exists():
+            continue
+        prd_text = path.read_text(encoding='utf-8')
+        category_summary = parse_category_summary(prd_text)
+        parsed_filters = parse_filter_sections(prd_text, category_summary)
+        if category_summary and parsed_filters:
+            return path, prd_text, category_summary, parsed_filters
+    searched = ', '.join(str(path.relative_to(ROOT)) for path in candidate_paths if path.exists())
+    raise ValueError(f'Unable to find PRD filter tables in any known source file: {searched}')
+
+
 def month_order(months: list[int]) -> list[int]:
     return sorted(dict.fromkeys(months))
 
@@ -253,6 +271,60 @@ def default_cost_estimate(estimated_neurons: int, requires_ai: bool, client_side
     return f'≈{estimated_neurons} neurons'
 
 
+def resolve_active_month(config: dict[str, Any]) -> int:
+    for key in ('generatedAt', 'sourceDate'):
+        raw_value = str(config.get(key, '')).strip()
+        if not raw_value:
+            continue
+        try:
+            return datetime.fromisoformat(raw_value.replace('Z', '+00:00')).month
+        except ValueError:
+            continue
+    return datetime.now(timezone.utc).month
+
+
+def validate_viral_tags(config: dict[str, Any], known_slugs: set[str]) -> None:
+    invalid: list[str] = []
+    for trend_id, trend in config.get('viralTags', {}).items():
+        if not isinstance(trend, dict):
+            invalid.append(f'{trend_id}:<invalid-trend>')
+            continue
+        for slug in trend.get('filters', []):
+            if slug not in known_slugs:
+                invalid.append(f'{trend_id}:{slug}')
+    if invalid:
+        joined = ', '.join(invalid)
+        raise ValueError(f'viralTags references unknown filter slugs: {joined}')
+
+
+def build_viral_score_map(config: dict[str, Any]) -> dict[str, int]:
+    scores: dict[str, int] = {}
+    for trend in config.get('viralTags', {}).values():
+        if not isinstance(trend, dict) or not trend.get('active'):
+            continue
+        priority = max(0, int(trend.get('priority', 0)))
+        score = max(95, min(100, 95 + round(priority / 20)))
+        for slug in trend.get('filters', []):
+            scores[slug] = max(scores.get(slug, 0), score)
+    return scores
+
+
+def calculate_viral_score(
+    slug: str,
+    seasonal_months: list[int],
+    is_demo: bool,
+    active_month: int,
+    viral_score_map: dict[str, int],
+) -> int:
+    if slug in viral_score_map:
+        return viral_score_map[slug]
+    if active_month in seasonal_months:
+        return 70
+    if is_demo:
+        return 50
+    return 0
+
+
 def build_share_text(name: str, emoji: str, is_demo: bool, client_side_only: bool) -> str:
     if client_side_only:
         return f'I just tried the {name} effect on GIC Photo Filters {emoji}'
@@ -261,7 +333,12 @@ def build_share_text(name: str, emoji: str, is_demo: bool, client_side_only: boo
     return f'I just tried the {name} filter on GIC Photo Filters {emoji}'
 
 
-def build_filter_record(filter_row: dict[str, Any], config: dict[str, Any]) -> OrderedDict[str, Any]:
+def build_filter_record(
+    filter_row: dict[str, Any],
+    config: dict[str, Any],
+    active_month: int,
+    viral_score_map: dict[str, int],
+) -> OrderedDict[str, Any]:
     slug = filter_row['slug']
     utility_override = config['utilityOverrides'].get(slug, {})
     original_type = filter_row['type']
@@ -283,6 +360,7 @@ def build_filter_record(filter_row: dict[str, Any], config: dict[str, Any]) -> O
         'costEstimate',
         default_cost_estimate(estimated_neurons, requires_ai, client_side_only),
     )
+    viral_score = calculate_viral_score(slug, seasonal_months, is_demo, active_month, viral_score_map)
     tags = build_tags(filter_row, config, is_demo=is_demo, is_seasonal=is_seasonal, client_side_only=client_side_only)
     description = filter_row['summary'].rstrip('.') + '.'
     search_text = ' '.join(
@@ -323,6 +401,7 @@ def build_filter_record(filter_row: dict[str, Any], config: dict[str, Any]) -> O
     record['outputHeight'] = type_defaults['outputHeight']
     record['variantCount'] = type_defaults['variantCount']
     record['isDemoFilter'] = is_demo
+    record['viralScore'] = viral_score
     record['isSeasonalHighlight'] = is_seasonal
     record['seasonalMonths'] = seasonal_months
     record['requiresAI'] = requires_ai
@@ -445,10 +524,12 @@ def build_facets(filters: list[OrderedDict[str, Any]], categories: list[OrderedD
 
 def build_catalog() -> OrderedDict[str, Any]:
     config = load_json(CONFIG_PATH)
-    prd_text = PRD_PATH.read_text(encoding='utf-8')
-    category_summary = parse_category_summary(prd_text)
-    parsed_filters = parse_filter_sections(prd_text, category_summary)
-    filters = [build_filter_record(item, config) for item in parsed_filters]
+    prd_path, prd_text, category_summary, parsed_filters = load_prd_source()
+    known_slugs = {item['slug'] for item in parsed_filters}
+    validate_viral_tags(config, known_slugs)
+    active_month = resolve_active_month(config)
+    viral_score_map = build_viral_score_map(config)
+    filters = [build_filter_record(item, config, active_month, viral_score_map) for item in parsed_filters]
     preserve_existing_previews(filters)
     categories = build_categories(filters, category_summary, config)
     actual_categories = {category['slug'] for category in categories}
@@ -463,7 +544,7 @@ def build_catalog() -> OrderedDict[str, Any]:
     catalog['catalogHash'] = catalog_hash
     catalog['source'] = OrderedDict([
         ('repository', 'gicPhotoFilters'),
-        ('prdPath', 'PRD.md'),
+        ('prdPath', str(prd_path.relative_to(ROOT))),
         ('prdDate', parse_prd_date(prd_text, config['sourceDate'])),
         ('generator', 'catalog/generate_filters_index.py'),
         ('config', 'catalog/catalog-config.json'),
@@ -480,6 +561,15 @@ def build_catalog() -> OrderedDict[str, Any]:
     catalog['plannedCategoryCount'] = len(planned_categories)
     catalog['dailyFreeNeurons'] = config['dailyFreeNeurons']
     catalog['freeTransformsPerIp'] = config['freeTransformsPerIp']
+    catalog['starterTransforms'] = config['starterTransforms']
+    catalog['referralBonusTransforms'] = config['referralBonusTransforms']
+    catalog['referralThreshold'] = config['referralThreshold']
+    catalog['starterBonusCapPerDay'] = config['starterBonusCapPerDay']
+    catalog['cloudflareFreeDailyEstimate'] = config['cloudflareFreeDailyEstimate']
+    catalog['byokPromptAfterSuccess'] = config['byokPromptAfterSuccess']
+    catalog['embedAllowed'] = config['embedAllowed']
+    catalog['challengeMode'] = config['challengeMode']
+    catalog['viralTags'] = config['viralTags']
     catalog['models'] = config['models']
     catalog['categories'] = categories
     catalog['plannedCategories'] = planned_categories
@@ -490,6 +580,7 @@ def build_catalog() -> OrderedDict[str, Any]:
         ('demoFilters', len(catalog['demoFilterIds'])),
         ('seasonalFilters', sum(1 for item in filters if item['isSeasonalHighlight'])),
         ('clientSideFilters', sum(1 for item in filters if item['clientSideOnly'])),
+        ('activeViralTrends', sum(1 for item in config['viralTags'].values() if item.get('active'))),
     ])
     catalog['filters'] = filters
     if catalog['totalFilters'] != 205:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 import sys
@@ -39,6 +40,21 @@ PREFERRED_FIRST = [
     "graduation--life_events",
     "anime-portrait--artistic_styles",
 ]
+FLAGGED_ERROR_MARKERS = (
+    "your output has been flagged",
+    "choose another prompt / input image combination",
+)
+PROMPT_SOFTENING_RULES: list[tuple[str, str]] = [
+    (r"\bgrinch\b", "festive green holiday character"),
+    (r"\bjedi(?: knight)?\b", "space fantasy guardian"),
+    (r"\bsuperhero\b", "heroic cinematic character"),
+    (r"\brock[- ]star\b", "stage performer"),
+    (r"\bspace[- ]astronaut\b", "space explorer"),
+    (r"\bviking[- ]warrior\b", "nordic historical adventurer"),
+    (r"\bdaguerreotype\b", "early photographic portrait"),
+    (r"\bexplorer[- ]archaeologist\b", "adventure explorer at ancient ruins"),
+    (r"\bfourth[- ]of[- ]july\b", "summer celebration"),
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,6 +72,18 @@ def parse_args() -> argparse.Namespace:
     run_parser.add_argument("--item-id", default=None, help="Run exactly one item by id.")
     run_parser.add_argument("--retry-failed", action="store_true", help="Include previously failed items.")
     run_parser.add_argument("--timeout", type=int, default=120, help="HTTP timeout in seconds per call.")
+
+    retry_parser = subparsers.add_parser(
+        "retry-flagged",
+        help="Queue new retry attempts for Cloudflare-flagged failures using softened custom prompts.",
+    )
+    retry_parser.add_argument("--limit", type=int, default=None, help="Only queue the first N flagged failures.")
+
+    retry_rejected_parser = subparsers.add_parser(
+        "retry-rejected",
+        help="Queue new retry attempts for items you rejected in review, using a different source image when possible.",
+    )
+    retry_rejected_parser.add_argument("--limit", type=int, default=None, help="Only queue the first N rejected items.")
 
     subparsers.add_parser("report", help="Print queue status.")
     return parser.parse_args()
@@ -108,6 +136,234 @@ def merge_existing_progress(base_item: dict[str, Any], existing_item: dict[str, 
         if key in existing_item:
             base_item[key] = existing_item[key]
     return base_item
+
+
+def manifest_by_id() -> dict[str, dict[str, Any]]:
+    return {filter_def["id"]: filter_def for filter_def in load_manifest_filters()}
+
+
+def next_attempt_for_filter(state: dict[str, Any], filter_id: str) -> int:
+    return 1 + max(
+        (item.get("attempt", 1) for item in state.get("items", []) if item.get("filterId") == filter_id),
+        default=1,
+    )
+
+
+def choose_retry_image(state: dict[str, Any], filter_def: dict[str, Any], retry_of_item: dict[str, Any]) -> tuple[Any, int, list[str]]:
+    images = discover_model_images()
+    ranked = rank_images_for_filter(images, filter_def)
+    used_image_ids = {
+        row["imageId"]
+        for row in state.get("items", [])
+        if row.get("filterId") == retry_of_item["filterId"]
+    }
+
+    for image, score in ranked:
+        if image.image_id in used_image_ids:
+            continue
+        alternatives = [row.image_id for row, _ in ranked if row.image_id not in used_image_ids and row.image_id != image.image_id]
+        return image, score, alternatives
+
+    fallback = next((image for image, score in ranked if image.image_id == retry_of_item["imageId"]), ranked[0][0])
+    fallback_score = next((score for image, score in ranked if image.image_id == fallback.image_id), ranked[0][1])
+    alternatives = [row.image_id for row, _ in ranked if row.image_id != fallback.image_id]
+    return fallback, fallback_score, alternatives
+
+
+def soften_prompt(prompt: str) -> str:
+    softened = prompt
+    for pattern, replacement in PROMPT_SOFTENING_RULES:
+        softened = re.sub(pattern, replacement, softened, flags=re.IGNORECASE)
+
+    additions = [
+        "family-friendly",
+        "respectful wardrobe styling",
+        "non-violent",
+        "no branded logos",
+        "no copyrighted characters",
+        "editorial portrait photography",
+    ]
+    existing = softened.rstrip(" .")
+    suffix = ", " + ", ".join(additions)
+    return f"{existing}{suffix}"
+
+
+def soften_negative_prompt(negative_prompt: str) -> str:
+    additions = [
+        "violence",
+        "weapons",
+        "gore",
+        "hate symbols",
+        "copyrighted characters",
+        "brand logos",
+    ]
+    parts = [part.strip() for part in negative_prompt.split(",") if part.strip()]
+    seen = {part.lower() for part in parts}
+    for addition in additions:
+        if addition.lower() not in seen:
+            parts.append(addition)
+    return ", ".join(parts)
+
+
+def build_softened_custom_filter(filter_def: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": f"{filter_def['name']} Retry",
+        "description": f"Softened retry for {filter_def['name']}.",
+        "category": filter_def.get("categorySlug") or filter_def.get("category") or "artistic_styles",
+        "prompt": soften_prompt(str(filter_def.get("prompt") or "")),
+        "negativePrompt": soften_negative_prompt(str(filter_def.get("negativePrompt") or "")),
+        "model": filter_def.get("model"),
+        "strength": max(0.45, float(filter_def.get("strength") or 0.65) - 0.1),
+        "guidance": max(5.5, float(filter_def.get("guidance") or 7.5) - 0.5),
+        "width": int(filter_def.get("outputWidth") or 768),
+        "height": int(filter_def.get("outputHeight") or 768),
+        "variantCount": 1,
+        "tags": list(filter_def.get("tags") or []) + ["retry", "softened"],
+    }
+
+
+def is_flagged_failure(item: dict[str, Any]) -> bool:
+    if item.get("status") != "failed":
+        return False
+    message = str((item.get("lastError") or {}).get("message") or "").lower()
+    return any(marker in message for marker in FLAGGED_ERROR_MARKERS)
+
+
+def has_retry_for_item(state: dict[str, Any], item_id: str) -> bool:
+    return any(row.get("retryOfItemId") == item_id for row in state.get("items", []))
+
+
+def build_flagged_retry_item(state: dict[str, Any], failed_item: dict[str, Any], filter_def: dict[str, Any]) -> dict[str, Any]:
+    image, score, alternatives = choose_retry_image(state, filter_def, failed_item)
+    attempt = next_attempt_for_filter(state, failed_item["filterId"])
+    custom_filter = build_softened_custom_filter(filter_def)
+    return {
+        "itemId": make_item_id(failed_item["filterId"], image.image_id, attempt),
+        "filterId": failed_item["filterId"],
+        "filterSlug": failed_item["filterSlug"],
+        "filterName": failed_item["filterName"],
+        "filterCategory": failed_item.get("filterCategory"),
+        "filterType": failed_item.get("filterType"),
+        "filterModel": failed_item.get("filterModel"),
+        "estimatedNeurons": failed_item.get("estimatedNeurons"),
+        "imageId": image.image_id,
+        "imagePath": relative_to_repo(image.path),
+        "imageMimeType": image.mime_type,
+        "imageExtension": image.extension,
+        "imageTags": image.tags,
+        "selectionScore": score,
+        "alternativeImageIds": alternatives,
+        "status": "queued_retry",
+        "attempt": attempt,
+        "createdAt": now_iso(),
+        "updatedAt": now_iso(),
+        "generatedAt": None,
+        "reviewedAt": None,
+        "beforeAsset": None,
+        "afterAsset": None,
+        "afterMimeType": None,
+        "lastError": None,
+        "retryOfItemId": failed_item["itemId"],
+        "customFilter": custom_filter,
+        "notes": [
+            f"Queued from flagged item {failed_item['itemId']}",
+            f"Softened prompt retry using image {image.image_id}",
+        ],
+    }
+
+
+def retry_flagged(limit: int | None = None) -> int:
+    state = load_state()
+    manifest = manifest_by_id()
+    queued = 0
+
+    flagged_items = [item for item in state.get("items", []) if is_flagged_failure(item)]
+    flagged_items.sort(key=lambda item: item.get("updatedAt") or "")
+
+    for item in flagged_items:
+        if has_retry_for_item(state, item["itemId"]):
+            continue
+        filter_def = manifest.get(item["filterId"])
+        if not filter_def:
+            continue
+        retry_item = build_flagged_retry_item(state, item, filter_def)
+        state["items"].append(retry_item)
+        queued += 1
+        if limit is not None and queued >= limit:
+            break
+
+    save_state(state)
+    print(f"Queued {queued} softened retries.")
+    if queued:
+        for item in [row for row in state["items"] if row.get("retryOfItemId")][-queued:]:
+            print(f"  {item['itemId']} <- {item['retryOfItemId']} ({item['imageId']})")
+    return 0
+
+
+def build_rejected_retry_item(state: dict[str, Any], rejected_item: dict[str, Any], filter_def: dict[str, Any]) -> dict[str, Any]:
+    image, score, alternatives = choose_retry_image(state, filter_def, rejected_item)
+    attempt = next_attempt_for_filter(state, rejected_item["filterId"])
+    return {
+        "itemId": make_item_id(rejected_item["filterId"], image.image_id, attempt),
+        "filterId": rejected_item["filterId"],
+        "filterSlug": rejected_item["filterSlug"],
+        "filterName": rejected_item["filterName"],
+        "filterCategory": rejected_item.get("filterCategory"),
+        "filterType": rejected_item.get("filterType"),
+        "filterModel": rejected_item.get("filterModel"),
+        "estimatedNeurons": rejected_item.get("estimatedNeurons"),
+        "imageId": image.image_id,
+        "imagePath": relative_to_repo(image.path),
+        "imageMimeType": image.mime_type,
+        "imageExtension": image.extension,
+        "imageTags": image.tags,
+        "selectionScore": score,
+        "alternativeImageIds": alternatives,
+        "status": "queued_retry",
+        "attempt": attempt,
+        "createdAt": now_iso(),
+        "updatedAt": now_iso(),
+        "generatedAt": None,
+        "reviewedAt": None,
+        "beforeAsset": None,
+        "afterAsset": None,
+        "afterMimeType": None,
+        "lastError": None,
+        "retryOfItemId": rejected_item["itemId"],
+        "notes": [
+            f"Queued from rejected item {rejected_item['itemId']}",
+            f"Retry using image {image.image_id}",
+        ],
+    }
+
+
+def retry_rejected(limit: int | None = None) -> int:
+    state = load_state()
+    manifest = manifest_by_id()
+    queued = 0
+
+    rejected_items = [item for item in state.get("items", []) if item.get("status") == "rejected"]
+    rejected_items.sort(key=lambda item: item.get("reviewedAt") or item.get("updatedAt") or "")
+
+    for item in rejected_items:
+        if has_retry_for_item(state, item["itemId"]):
+            continue
+        filter_def = manifest.get(item["filterId"])
+        if not filter_def:
+            continue
+        retry_item = build_rejected_retry_item(state, item, filter_def)
+        state["items"].append(retry_item)
+        queued += 1
+        if limit is not None and queued >= limit:
+            break
+
+    save_state(state)
+    print(f"Queued {queued} retries from rejected items.")
+    if queued:
+        recent = [row for row in state["items"] if row.get("retryOfItemId")][-queued:]
+        for item in recent:
+            print(f"  {item['itemId']} <- {item['retryOfItemId']} ({item['imageId']})")
+    return 0
 
 
 def init_plan(limit: int | None = None) -> int:
@@ -246,9 +502,11 @@ def generate_item(item: dict[str, Any], api_url: str, timeout_seconds: int) -> t
     files = {
         "image": (before_path.name, before_path.read_bytes(), item.get("imageMimeType") or "image/jpeg"),
     }
-    data = {
-        "filterId": item["filterId"],
-    }
+    data: dict[str, str] = {}
+    if item.get("customFilter"):
+        data["customFilter"] = json.dumps(item["customFilter"], ensure_ascii=True)
+    else:
+        data["filterId"] = item["filterId"]
 
     try:
         response = requests.post(
@@ -364,6 +622,10 @@ def main() -> int:
             retry_failed=args.retry_failed,
             timeout_seconds=max(1, args.timeout),
         )
+    if args.command == "retry-flagged":
+        return retry_flagged(limit=args.limit)
+    if args.command == "retry-rejected":
+        return retry_rejected(limit=args.limit)
     if args.command == "report":
         return report()
     raise SystemExit(f"Unsupported command: {args.command}")
