@@ -72,6 +72,54 @@ function buildCloudflareError(status, payload, { defaultCode, defaultMessage, pe
   );
 }
 
+function toUint8Array(value) {
+  if (!value) return null;
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (Array.isArray(value)) return Uint8Array.from(value);
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
+  }
+  return null;
+}
+
+function usesMultipartWorkersAi(modelId) {
+  return typeof modelId === "string" && modelId.includes("/flux-2-");
+}
+
+function buildWorkersAiFetchOptions({ apiToken, modelId, input }) {
+  if (!usesMultipartWorkersAi(modelId)) {
+    return {
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(input),
+    };
+  }
+
+  const form = new FormData();
+  const imageBytes = toUint8Array(input?.image);
+
+  if (input?.prompt) form.set("prompt", String(input.prompt));
+  if (input?.negative_prompt) form.set("negative_prompt", String(input.negative_prompt));
+  if (Number.isFinite(Number(input?.width))) form.set("width", String(Number(input.width)));
+  if (Number.isFinite(Number(input?.height))) form.set("height", String(Number(input.height)));
+  if (Number.isFinite(Number(input?.guidance))) form.set("guidance", String(Number(input.guidance)));
+  if (Number.isFinite(Number(input?.strength))) form.set("strength", String(Number(input.strength)));
+
+  if (imageBytes?.byteLength) {
+    form.set("input_image_0", new Blob([imageBytes], { type: "image/jpeg" }), "input.jpg");
+  }
+
+  return {
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+    },
+    body: form,
+  };
+}
+
 export function maskCloudflareAccountId(accountId) {
   const value = String(accountId || "").trim();
   if (value.length <= 8) {
@@ -166,15 +214,13 @@ export async function runCloudflareModel({ accountId, apiToken, modelId, input }
   const normalizedModelId = String(modelId || "").replace(/^\/+/, "");
   let response;
   try {
+    const requestOptions = buildWorkersAiFetchOptions({ apiToken, modelId: normalizedModelId, input });
     response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${normalizedModelId}`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiToken}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(input),
+        headers: requestOptions.headers,
+        body: requestOptions.body,
       },
     );
   } catch (error) {
