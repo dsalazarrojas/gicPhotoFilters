@@ -219,6 +219,7 @@ function openSettingsSurface(source = 'site-header') {
 }
 
 if (hasDom) {
+  initCardPublishButtons(document.body);
   window.addEventListener(BYOK_EVENTS.CHANGED, () => syncHeaderSettingsState());
 }
 
@@ -611,12 +612,14 @@ function renderFilterCard(filter, options = {}) {
   const tryHref = buildTryHref(filter);
   const detailsHref = `${tryHref}#details`;
   const compact = options.compact ? ' compact' : '';
+  const shareUrl = buildTryShareUrl(filter);
+  const shareText = `${filter.shareText} ${shareUrl}`.trim();
   return `
     <article class="filter-card${compact}">
-      <div class="filter-card__media">
-        <img src="${filter.previewBefore}" alt="${escapeHtml(filter.name)} before preview" loading="lazy" />
+      <a class="filter-card__media filter-card__media-link" href="${detailsHref}" aria-label="Open ${escapeHtml(filter.name)} details">
         <img src="${filter.previewAfter}" alt="${escapeHtml(filter.name)} transformed preview" loading="lazy" />
-      </div>
+        <img src="${filter.previewBefore}" alt="${escapeHtml(filter.name)} before preview" loading="lazy" />
+      </a>
       <div class="filter-card__content">
         <div class="filter-card__badges">
           <span class="badge badge--brand">${filter.categoryMeta.emoji} ${escapeHtml(filter.categoryDisplay)}</span>
@@ -635,9 +638,47 @@ function renderFilterCard(filter, options = {}) {
         <div class="filter-card__actions">
           <a class="button" href="${tryHref}">Try</a>
           <a class="button-ghost" href="${detailsHref}">Details</a>
+          <button
+            class="button-ghost"
+            type="button"
+            data-publish-filter="${escapeHtml(filter.id)}"
+            data-share-url="${escapeHtml(shareUrl)}"
+            data-share-text="${escapeHtml(shareText)}"
+            data-filter-name="${escapeHtml(filter.name)}"
+          >Publish</button>
         </div>
       </div>
     </article>`;
+}
+
+function initCardPublishButtons(root = document) {
+  if (!root || root.dataset.publishButtonsBound === 'true') return;
+  root.dataset.publishButtonsBound = 'true';
+
+  root.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-publish-filter]');
+    if (!button) return;
+    event.preventDefault();
+
+    const shareUrl = button.dataset.shareUrl || '';
+    const shareText = button.dataset.shareText || shareUrl;
+    const filterName = button.dataset.filterName || 'GIC Photo Filter';
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: filterName, text: shareText, url: shareUrl });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareText);
+        showToast('Publish link copied to your clipboard.');
+      } else {
+        showToast('Publishing is not available in this browser.');
+        return;
+      }
+      track('filter_publish_card', { filterId: button.dataset.publishFilter || '', source: 'catalog-card' });
+    } catch {
+      showToast('Publishing was cancelled.');
+    }
+  });
 }
 
 function renderCategoryCard(category, actualCount = 0) {
