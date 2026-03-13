@@ -3555,7 +3555,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/watercolor_before_a.webp",
+          "after": "docs/assets/filter-previews/watercolor_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/watercolor_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/watercolor_after_a.webp"
     },
     {
       "number": 53,
@@ -3606,7 +3614,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/pop-art-warhol_before_a.webp",
+          "after": "docs/assets/filter-previews/pop-art-warhol_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/pop-art-warhol_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/pop-art-warhol_after_a.webp"
     },
     {
       "number": 54,
@@ -3860,7 +3876,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/pixar-3d-cartoon_before_a.webp",
+          "after": "docs/assets/filter-previews/pixar-3d-cartoon_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/pixar-3d-cartoon_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/pixar-3d-cartoon_after_a.webp"
     },
     {
       "number": 59,
@@ -3910,7 +3934,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/simpsons-character_before_a.webp",
+          "after": "docs/assets/filter-previews/simpsons-character_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/simpsons-character_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/simpsons-character_after_a.webp"
     },
     {
       "number": 60,
@@ -3961,7 +3993,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/studio-ghibli_before_a.webp",
+          "after": "docs/assets/filter-previews/studio-ghibli_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/studio-ghibli_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/studio-ghibli_after_a.webp"
     },
     {
       "number": 61,
@@ -4064,7 +4104,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/pixel-art-8-bit_before_a.webp",
+          "after": "docs/assets/filter-previews/pixel-art-8-bit_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/pixel-art-8-bit_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/pixel-art-8-bit_after_a.webp"
     },
     {
       "number": 63,
@@ -4115,7 +4163,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/pixel-art-16-bit_before_a.webp",
+          "after": "docs/assets/filter-previews/pixel-art-16-bit_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/pixel-art-16-bit_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/pixel-art-16-bit_after_a.webp"
     },
     {
       "number": 64,
@@ -4310,7 +4366,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/stained-glass_before_a.webp",
+          "after": "docs/assets/filter-previews/stained-glass_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/stained-glass_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/stained-glass_after_a.webp"
     },
     {
       "number": 68,
@@ -4563,7 +4627,15 @@
       "categoryPath": "categories/artistic-styles.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/surrealist-dali_before_a.webp",
+          "after": "docs/assets/filter-previews/surrealist-dali_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/surrealist-dali_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/surrealist-dali_after_a.webp"
     },
     {
       "number": 73,
@@ -5805,7 +5877,15 @@
       "shareText": "I just tried the Graduation filter free on GIC Photo Filters \ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66",
       "searchText": "graduation life events & milestones academic cap and gown with confetti and diploma. milestone celebration family announcement graduation academic cap gown confetti diploma demo seasonal",
       "tryPath": "try.html?id=graduation--life_events",
-      "categoryPath": "categories/life-events.html"
+      "categoryPath": "categories/life-events.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/graduation_before_a.webp",
+          "after": "docs/assets/filter-previews/graduation_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/graduation_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/graduation_after_a.webp"
     },
     {
       "number": 98,
@@ -7546,7 +7626,15 @@
       "shareText": "I just tried the LinkedIn Photo filter on GIC Photo Filters \ud83d\udcbc",
       "searchText": "linkedin photo professional & business polished linkedin profile photo with soft professional lighting. headshot profile business career linkedin polished soft professional lighting",
       "tryPath": "try.html?id=linkedin-photo--professional",
-      "categoryPath": "categories/professional.html"
+      "categoryPath": "categories/professional.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/linkedin-photo_before_a.webp",
+          "after": "docs/assets/filter-previews/linkedin-photo_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/linkedin-photo_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/linkedin-photo_after_a.webp"
     },
     {
       "number": 133,
@@ -7593,7 +7681,15 @@
       "shareText": "I just tried the Corporate Portrait filter on GIC Photo Filters \ud83d\udcbc",
       "searchText": "corporate portrait professional & business corporate portrait with suit/blazer and office bokeh background. headshot profile business career corporate suit blazer office bokeh background",
       "tryPath": "try.html?id=corporate-portrait--professional",
-      "categoryPath": "categories/professional.html"
+      "categoryPath": "categories/professional.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/corporate-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/corporate-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/corporate-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/corporate-portrait_after_a.webp"
     },
     {
       "number": 134,
@@ -7640,7 +7736,15 @@
       "shareText": "I just tried the Author Photo filter on GIC Photo Filters \ud83d\udcbc",
       "searchText": "author photo professional & business book jacket author photo with dramatic moody lighting. headshot profile business career author book jacket dramatic moody lighting",
       "tryPath": "try.html?id=author-photo--professional",
-      "categoryPath": "categories/professional.html"
+      "categoryPath": "categories/professional.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/author-photo_before_a.webp",
+          "after": "docs/assets/filter-previews/author-photo_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/author-photo_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/author-photo_after_a.webp"
     },
     {
       "number": 135,
@@ -9935,7 +10039,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/bobblehead_before_a.webp",
+          "after": "docs/assets/filter-previews/bobblehead_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/bobblehead_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/bobblehead_after_a.webp"
     },
     {
       "number": 182,
@@ -10027,7 +10139,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "sd15-inpainting",
       "sourceType": "inpainting",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/magazine-cover_before_a.webp",
+          "after": "docs/assets/filter-previews/magazine-cover_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/magazine-cover_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/magazine-cover_after_a.webp"
     },
     {
       "number": 184,
@@ -10175,7 +10295,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "sd15-img2img",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/money-bill-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/money-bill-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/money-bill-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/money-bill-portrait_after_a.webp"
     },
     {
       "number": 187,
@@ -10317,7 +10445,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/funko-pop_before_a.webp",
+          "after": "docs/assets/filter-previews/funko-pop_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/funko-pop_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/funko-pop_after_a.webp"
     },
     {
       "number": 190,
@@ -10364,7 +10500,15 @@
       "shareText": "I just tried the Renaissance Meme filter on GIC Photo Filters \ud83c\udf89",
       "searchText": "renaissance meme fun & meme classical renaissance painting holding modern objects. fun meme novelty shareable renaissance classical painting holding modern objects",
       "tryPath": "try.html?id=renaissance-meme--fun_meme",
-      "categoryPath": "categories/fun-meme.html"
+      "categoryPath": "categories/fun-meme.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/renaissance-meme_before_a.webp",
+          "after": "docs/assets/filter-previews/renaissance-meme_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/renaissance-meme_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/renaissance-meme_after_a.webp"
     },
     {
       "number": 191,
@@ -10410,7 +10554,15 @@
       "shareText": "I just tried the Alien/Extraterrestrial filter on GIC Photo Filters \ud83c\udf89",
       "searchText": "alien/extraterrestrial fun & meme transform into a friendly alien from another planet. fun meme novelty shareable alien extraterrestrial friendly another planet",
       "tryPath": "try.html?id=alien-extraterrestrial--fun_meme",
-      "categoryPath": "categories/fun-meme.html"
+      "categoryPath": "categories/fun-meme.html",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/alien-extraterrestrial_before_a.webp",
+          "after": "docs/assets/filter-previews/alien-extraterrestrial_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/alien-extraterrestrial_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/alien-extraterrestrial_after_a.webp"
     },
     {
       "number": 192,
@@ -10511,7 +10663,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/cloud-portrait_before_a.webp",
+          "after": "docs/assets/filter-previews/cloud-portrait_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/cloud-portrait_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/cloud-portrait_after_a.webp"
     },
     {
       "number": 194,
@@ -10608,7 +10768,15 @@
       "categoryPath": "categories/fun-meme.html",
       "sourceModel": "flux2-klein-9b",
       "sourceType": "style-transfer",
-      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime."
+      "migrationNote": "Migrated to a FLUX img2img-compatible implementation for the website runtime.",
+      "previewImages": [
+        {
+          "before": "docs/assets/filter-previews/emoji-version_before_a.webp",
+          "after": "docs/assets/filter-previews/emoji-version_after_a.webp"
+        }
+      ],
+      "previewBefore": "docs/assets/filter-previews/emoji-version_before_a.webp",
+      "previewAfter": "docs/assets/filter-previews/emoji-version_after_a.webp"
     },
     {
       "number": 196,
