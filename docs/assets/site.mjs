@@ -361,7 +361,7 @@ function createCustomFilterEntry(rawDefinition, catalog) {
     type: 'img2img',
     tags: definition.tags,
     shareText: `Try my custom filter “${definition.name}”:`,
-    helpMarkdown: `## Shared custom filter\n- Prompt: ${definition.prompt}\n- Model: ${definition.model}\n- Add your Cloudflare key in Settings if this deployment blocks custom demo runs.`,
+    helpMarkdown: `## Shared custom filter\n- Prompt: ${definition.prompt}\n- Model: ${definition.model}\n- Add your Cloudflare key in Settings to run this custom filter.`,
     customDefinition: definition,
     isCustomFilter: true,
   }, 0, catalog?.models || FALLBACK_CATALOG.models, categoryMap);
@@ -1592,25 +1592,13 @@ async function runTransform({
     let warningMessage = '';
     let requestMode = 'preview';
     if (!filter.clientSideOnly) {
-      try {
-        const apiOptions = { customFilter, signal };
-        const apiResult = await attemptApiTransform(filter, sourceBlob, intensity, byok, apiOptions);
-        images = apiResult.images;
-        mode = apiResult.mode;
-        storageMode = apiResult.storageMode || 'r2';
-        requestMode = apiResult.requestMode || (byok?.hasCredentials ? 'cloudflare' : 'demo');
-        warningMessage = '';
-      } catch (error) {
-        if (!shouldFallbackToPreview(error)) {
-          throw error;
-        }
-        warningMessage = `Transform failed: ${error.message}. Preview ready instead.`;
-        console.error(error);
-        images = await generatePreviewVariants(source, filter, intensity);
-        mode = 'preview';
-        storageMode = 'preview';
-        requestMode = 'preview';
-      }
+      const apiOptions = { customFilter, signal };
+      const apiResult = await attemptApiTransform(filter, sourceBlob, intensity, byok, apiOptions);
+      images = apiResult.images;
+      mode = apiResult.mode;
+      storageMode = apiResult.storageMode || 'r2';
+      requestMode = apiResult.requestMode || (byok?.hasCredentials ? 'cloudflare' : 'demo');
+      warningMessage = '';
     } else {
       images = await generatePreviewVariants(source, filter, intensity);
       mode = 'preview';
@@ -2247,7 +2235,7 @@ async function initTryPage() {
       byokStatusSetup.textContent = 'Cloudflare guide →';
     } else {
       byokStatusBanner.dataset.variant = 'demo';
-      byokStatusTitle.textContent = `🔑 Using demo mode — ${getDemoRemainingCount()} free transforms left today`;
+      byokStatusTitle.textContent = `✨ ${getDemoRemainingCount()} free transforms left today`;
       byokStatusDetail.textContent = 'Add your free Cloudflare key for unlimited access. Demo requests stay on this site and use the shared rate-limited proxy.';
       byokStatusPrimary.textContent = 'Add your key →';
       byokStatusSetup.textContent = 'Set up in 2 minutes →';
@@ -2262,7 +2250,7 @@ async function initTryPage() {
     if (byokSummary) {
       byokSummary.textContent = state.byok.hasCredentials
         ? 'Transforms keep posting to this site backend, which forwards your Cloudflare credentials as secure request headers.'
-        : 'Add your Cloudflare account ID and API token to upgrade from demo mode without leaving the page.';
+        : 'Add your Cloudflare account ID and API token for unlimited transforms without leaving the page.';
     }
     if (byokStorageDetail) byokStorageDetail.textContent = getStorageCopy();
     if (byokTestButton) byokTestButton.disabled = !state.byok.hasCredentials || !state.byok.accountIdValid;
@@ -2275,7 +2263,7 @@ async function initTryPage() {
     } else if (state.byok.hasCredentials) {
       setByokConnectionMessage('Credentials are saved locally. Test the connection before your next transform.');
     } else {
-      setByokConnectionMessage('No Cloudflare key saved yet. Demo mode will use the site proxy limits.');
+      setByokConnectionMessage('No Cloudflare key saved yet. Free transforms use the site’s daily limits.');
     }
     updateSessionUsageDisplay();
     renderByokStatusBanner();
@@ -2284,19 +2272,14 @@ async function initTryPage() {
   const updateTransformButtonLabel = () => {
     const filter = state.filter;
     if (!filter) return;
-    const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly;
     const isCustomFilter = Boolean(filter.customDefinition);
     transformButton.textContent = filter.clientSideOnly
       ? 'Apply effect instantly'
-      : isCustomFilter && !state.byok.hasCredentials && demoOnlyOnWeb
+      : isCustomFilter && !state.byok.hasCredentials
         ? 'Add your key to run this custom filter'
       : state.byok.hasCredentials
         ? isCustomFilter ? 'Run custom filter with your Cloudflare key' : 'Transform with your Cloudflare key'
-        : demoOnlyOnWeb
-          ? 'Preview only on web'
-          : filter.isDemoFilter
-            ? 'Transform — FREE ✨'
-            : 'Transform with this deployment';
+        : 'Transform — FREE ✨';
   };
 
   const syncByokState = (nextState, { resetHealth = true } = {}) => {
@@ -2326,7 +2309,7 @@ async function initTryPage() {
     resetSessionNeurons();
     clearCachedByokHealth();
     syncByokState(nextState);
-    status.textContent = 'Cloudflare credentials cleared. Demo mode is active again.';
+    status.textContent = 'Cloudflare credentials cleared. Free transforms use the site’s daily limits.';
   };
 
   const testByokConnection = async ({ announce = true } = {}) => {
@@ -2397,7 +2380,7 @@ async function initTryPage() {
   };
 
   const getStageBadge = (filter) => {
-    if (filter?.customDefinition && Boolean(state.health?.limits?.demoMode) && !state.byok.hasCredentials) {
+    if (filter?.customDefinition && !state.byok.hasCredentials) {
       return '<span class="badge badge--warning">Custom filters on the public website require your Cloudflare key</span>';
     }
     if (state.outputMode === 'api') {
@@ -2411,13 +2394,10 @@ async function initTryPage() {
     if (state.byok.hasCredentials) {
       return '<span class="badge badge--brand">Cloudflare key ready · transforms proxy through this site</span>';
     }
-    if (Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly) {
-      return '<span class="badge badge--warning">Catalog preview only on the public web demo · use the app or your own deployment for live runs</span>';
-    }
     if (filter.isDemoFilter) {
       return '<span class="badge badge--success">Demo filter · ready for the free daily usage shell</span>';
     }
-    return '<span class="badge badge--warning">Full-catalog mode is enabled for this deployment</span>';
+    return '<span class="badge badge--success">Free transforms available within today’s usage limit</span>';
   };
 
   if (byokAccountInput) byokAccountInput.value = state.byok.accountId;
@@ -2426,7 +2406,6 @@ async function initTryPage() {
   const setSummary = async () => {
     const filter = state.filter;
     const isCustomFilter = Boolean(filter?.customDefinition);
-    const demoOnlyOnWeb = Boolean(state.health?.limits?.demoMode) && !filter.isDemoFilter && !filter.clientSideOnly;
     const related = sortFilters(catalog.filters.filter((item) => item.category === filter.category && item.id !== filter.id), 'popular').slice(0, 6);
     trySelectionTitle.textContent = isCustomFilter
       ? 'Switch to catalog filters'
@@ -2455,7 +2434,7 @@ async function initTryPage() {
         <span class="badge badge--brand">${capitalize(filter.type)}</span>
         <span class="badge">${escapeHtml(filter.modelLabel)}</span>
         <span class="badge">${filter.estimatedNeurons} neurons</span>
-        ${isCustomFilter ? '<span class="badge badge--warning">Shared custom</span>' : filter.isDemoFilter ? '<span class="badge badge--success">FREE</span>' : '<span class="badge badge--warning">Bring your own key</span>'}
+        ${isCustomFilter ? '<span class="badge badge--warning">Shared custom</span>' : '<span class="badge badge--success">FREE</span>'}
         ${filter.clientSideOnly ? '<span class="badge badge--accent">Browser-only</span>' : ''}
       </div>`;
     effectsControls.classList.toggle('hidden', !filter.clientSideOnly);
@@ -2463,11 +2442,7 @@ async function initTryPage() {
       ? 'Apply effect instantly'
       : state.byok.hasCredentials
         ? 'Transform with your Cloudflare key'
-        : demoOnlyOnWeb
-          ? 'Preview only on web'
-          : filter.isDemoFilter
-            ? 'Transform — FREE ✨'
-            : 'Transform with this deployment';
+        : 'Transform — FREE ✨';
     stageSlot.innerHTML = renderStagePlaceholder(filter);
     stageNote.innerHTML = getStageBadge(filter);
     renderUsageGrid(usageGrid, catalog, filter, state.demoUsage);
@@ -2496,7 +2471,7 @@ async function initTryPage() {
     updateByokPanelUi();
     status.textContent = state.byok.hasCredentials
       ? 'Your Cloudflare key is ready. Upload a photo to run it through the secure proxy.'
-      : isCustomFilter && Boolean(state.health?.limits?.demoMode)
+      : isCustomFilter
         ? 'This shared custom filter needs your Cloudflare key on the public website.'
         : state.trend
           ? `Trend mode active: ${state.trend.label}. Upload a clear photo and transform it to join in.`
@@ -2683,13 +2658,9 @@ async function initTryPage() {
 
   transformButton.addEventListener('click', async () => {
     if (!state.filter) return;
-    if (state.filter.customDefinition && Boolean(state.health?.limits?.demoMode) && !state.byok.hasCredentials) {
+    if (state.filter.customDefinition && !state.byok.hasCredentials) {
       status.textContent = 'Shared custom filters on the public website need your Cloudflare key.';
       window.dispatchEvent(new CustomEvent('gic:open-setup', { detail: { source: 'try-custom-transform' } }));
-      return;
-    }
-    if (Boolean(state.health?.limits?.demoMode) && !state.byok.hasCredentials && !state.filter.isDemoFilter && !state.filter.clientSideOnly) {
-      showToast('This filter is preview-only on the public web demo. Pick a FREE filter, use the app, or self-host with DEMO_MODE=false.');
       return;
     }
     if (!state.sourceDataUrl || !state.sourceBlob) {
