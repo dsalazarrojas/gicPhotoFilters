@@ -3,21 +3,6 @@ function parseInteger(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function parseBoolean(value, fallback) {
-  if (value === undefined || value === null || value === "") {
-    return fallback;
-  }
-
-  const normalized = String(value).trim().toLowerCase();
-  if (["true", "1", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-  if (["false", "0", "no", "off"].includes(normalized)) {
-    return false;
-  }
-  return fallback;
-}
-
 function parseStorageMode(value, fallback) {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (normalized === "r2" || normalized === "direct") {
@@ -30,7 +15,6 @@ export function getConfig(env) {
   const hasPhotoBucket = typeof env.PHOTO_BUCKET?.get === "function" && typeof env.PHOTO_BUCKET?.put === "function";
 
   return {
-    demoMode: parseBoolean(env.DEMO_MODE, true),
     storageMode: parseStorageMode(env.STORAGE_MODE, hasPhotoBucket ? "r2" : "direct"),
     maxFreeNeuronsPerDay: parseInteger(env.MAX_FREE_NEURONS_PER_DAY, 10_000),
     maxFreeTransformsPerIp: parseInteger(env.MAX_FREE_TRANSFORMS_PER_IP, 10),

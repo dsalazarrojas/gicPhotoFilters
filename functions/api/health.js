@@ -89,7 +89,6 @@ async function buildSiteHealth(context) {
           r2SetupGuideUrl: bindingStatus.PHOTO_BUCKET ? null : r2SetupGuideUrl,
         },
         limits: {
-          demoMode: config.demoMode,
           maxFreeTransformsPerIp: config.maxFreeTransformsPerIp,
           maxFreeNeuronsPerDay: config.maxFreeNeuronsPerDay,
           maxUploadBytes: config.maxUploadBytes,
