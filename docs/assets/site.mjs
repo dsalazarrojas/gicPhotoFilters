@@ -1163,16 +1163,12 @@ function renderUsageGrid(target, catalog, filter = null, usageSnapshot = null) {
   const limit = Number(usage.limit ?? 10);
   const bonusLimit = Number(usage.referralBonusTransforms ?? usage.bonusTransforms ?? 0);
   const remainingFree = Number.isFinite(Number(usage.remaining)) ? Number(usage.remaining) : Math.max(0, limit - used);
-  const neuronsUsed = Number(usage.neuronsUsed ?? 0);
-  const neuronsLimit = Number(usage.neuronsLimit ?? catalog.dailyFreeNeurons);
-  const remainingNeurons = Math.max(0, neuronsLimit - neuronsUsed);
   const currentCost = filter ? `${filter.estimatedNeurons} neurons / run` : 'Pick a filter to see per-run cost';
   const referralLine = usage.referral
     ? `Referral ${usage.referral.code || 'campaign'} · ${usage.referral.progress || 0}/${usage.referral.threshold || catalog.referralThreshold || 3}`
     : `${catalog.referralThreshold || 3} friend referrals can unlock +${catalog.referralBonusTransforms || 5} runs`;
   target.innerHTML = `
-    ${renderKpi('Free demo runs today', `${used}/${limit}`, `${remainingFree} demo runs remaining${bonusLimit ? ` · +${bonusLimit} referral bonus` : ''}`)}
-    ${renderKpi('Neuron budget', `${formatNumber(neuronsUsed)}/${formatNumber(neuronsLimit)}`, `${formatNumber(remainingNeurons)} neurons left`)}
+    ${renderKpi('Free transforms today', `${used} of ${limit}`, `${remainingFree} free transforms remaining${bonusLimit ? ` · +${bonusLimit} referral bonus` : ''}`)}
     ${renderKpi('Referral bonus', bonusLimit ? `+${bonusLimit} unlocked` : `+${catalog.referralBonusTransforms || 5} pending`, referralLine)}
     ${renderKpi('Current filter', filter ? escapeHtml(filter.name) : 'Choose a filter', currentCost)}
     ${renderKpi('Unlimited option', 'Companion app', 'Bring your own API key later for full access')}`;
