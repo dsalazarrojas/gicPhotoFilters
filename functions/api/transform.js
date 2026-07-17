@@ -60,25 +60,13 @@ export async function onRequestPost(context) {
         }
       : await getFilterById(context, requestData.filterId);
     const usingByok = Boolean(requestData.cloudflare);
-    if (config.demoMode && requestData.customFilter && !usingByok) {
+    if (requestData.customFilter && !usingByok) {
       throw new ApiError(
         403,
         "custom_filter_requires_byok",
         "Custom filters on the public website require your Cloudflare credentials. Add your key in Settings, then run the builder or shared custom link again.",
         {
-          demoMode: config.demoMode,
           requiresByok: true,
-        },
-      );
-    }
-    if (config.demoMode && !loaded.filter.isDemoFilter && !loaded.filter.clientSideOnly && !usingByok) {
-      throw new ApiError(
-        403,
-        "filter_requires_demo_or_byok",
-        "This filter is preview-only on the public website. Use a demo filter here, self-host with DEMO_MODE=false, or run it from the companion app with your own Cloudflare credentials.",
-        {
-          filterId: loaded.filter.id,
-          demoMode: config.demoMode,
         },
       );
     }
