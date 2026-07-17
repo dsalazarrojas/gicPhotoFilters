@@ -19,6 +19,15 @@ preview_id = "1a04e87cc92048c48e2ca544e9b2be02"
 
 [vars]
 STORAGE_MODE = "direct"
+# Neuron budget math (2026-07-17): flux-2-klein-9b is hardcoded at 150 neurons/run
+# in functions/_lib/ai.js — this is an ESTIMATE, not a value confirmed against a
+# real Cloudflare billing/dashboard run. At that estimate:
+#   10000 / 150 ≈ 66 real transforms sitewide/day before this breaker trips
+#   66 / MAX_FREE_TRANSFORMS_PER_IP(5) ≈ 13 unique IPs/day fully using their cap
+# That's a tight ceiling for a public production site. Before relying on this
+# number, run one real transform in production/preview, check the actual neuron
+# cost in the Cloudflare dashboard (Workers AI usage), and revisit this value —
+# that call is the project owner's, not something to bump automatically here.
 MAX_FREE_NEURONS_PER_DAY = "10000"
 MAX_FREE_TRANSFORMS_PER_IP = "5"
 SEASONAL_FILTER = ""
