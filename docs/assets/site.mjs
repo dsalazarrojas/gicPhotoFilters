@@ -1536,21 +1536,6 @@ async function attemptApiTransform(filter, blob, intensity = 0.65, byok = {}, op
   };
 }
 
-function shouldFallbackToPreview(error) {
-  if (error?.name === 'AbortError') return false;
-  return ![
-    'cloudflare_invalid_api_token',
-    'cloudflare_workers_ai_permission_required',
-    'cloudflare_account_not_found',
-    'cloudflare_credentials_incomplete',
-    'cloudflare_credentials_missing',
-    'cloudflare_account_id_invalid',
-    'custom_filter_requires_byok',
-    'custom_model_invalid',
-    'mask_required',
-  ].includes(error?.code || '')
-}
-
 function updateProgress(progressElement, percentage) {
   if (!progressElement) return;
   const bar = progressElement.querySelector('span');
@@ -2509,17 +2494,27 @@ async function initTryPage() {
     if (shareFilterButton) shareFilterButton.disabled = false;
   };
 
-  const openShareOverlay = async () => {
+  const openShareOverlay = async ({ budgetBlocked = false } = {}) => {
     if (!shareOverlay || !state.filter) return;
     const current = state.variants[state.activeVariantIndex];
-    if (!current) return;
+    if (!current && !budgetBlocked) return;
     const shareContext = buildShareContext();
     state.shareContext = shareContext;
-    if (shareOverlayTitle) shareOverlayTitle.textContent = `Your ${state.filter.name} result is ready`;
+    if (shareOverlayTitle) shareOverlayTitle.textContent = budgetBlocked
+      ? 'Share GIC Photo Filters to earn more transforms'
+      : `Your ${state.filter.name} result is ready`;
     if (shareOverlayCopy) {
-      shareOverlayCopy.textContent = shareContext.trendLabel
-        ? `Use this caption to invite friends into ${shareContext.trendLabel}.`
-        : 'Use this caption to post your before/after result.';
+      shareOverlayCopy.textContent = budgetBlocked
+        ? 'Share your referral link to help unlock more free transforms.'
+        : shareContext.trendLabel
+          ? `Use this caption to invite friends into ${shareContext.trendLabel}.`
+          : 'Use this caption to post your before/after result.';
+    }
+    if (shareOverlayCopyImage) shareOverlayCopyImage.hidden = budgetBlocked;
+    if (budgetBlocked) {
+      if (shareOverlayPreview) shareOverlayPreview.innerHTML = '<p class="microcopy">Your next free transform is available after referrals unlock a bonus or the daily limit resets.</p>';
+      if (typeof shareOverlay.showModal === 'function') shareOverlay.showModal();
+      return;
     }
     try {
       const collage = await createShareCollage({
@@ -2544,6 +2539,34 @@ async function initTryPage() {
       }
     }
     if (typeof shareOverlay.showModal === 'function') shareOverlay.showModal();
+  };
+
+  const showBudgetState = (error) => {
+    const siteWide = error?.code === 'daily_neuron_budget_reached';
+    const title = siteWide ? 'Today’s free transform budget is spent' : 'You’ve used today’s free transforms';
+    const copy = siteWide
+      ? 'The site-wide free transform budget is spent for today. Share to earn more, or use your own Cloudflare key. Resets at midnight UTC.'
+      : 'Share to earn more free transforms, or use your own Cloudflare key. Resets at midnight UTC.';
+    state.variants = [];
+    state.activeVariantIndex = 0;
+    resultActions.classList.add('hidden');
+    renderVariants(variantsTarget, [], 0, () => {});
+    stageSlot.innerHTML = `
+      <div class="empty-state">
+        <span class="badge badge--warning">Free limit reached</span>
+        <h3>${title}</h3>
+        <p>${copy}</p>
+        <div class="card-actions">
+          <button class="button" type="button" data-budget-share>Share to earn more</button>
+          <button class="button-secondary" type="button" data-budget-setup>Use your own Cloudflare key</button>
+        </div>
+      </div>`;
+    stageSlot.querySelector('[data-budget-share]')?.addEventListener('click', () => openShareOverlay({ budgetBlocked: true }));
+    stageSlot.querySelector('[data-budget-setup]')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('gic:open-setup', { detail: { source: 'try-budget-state' } }));
+    });
+    stageNote.innerHTML = '<span class="badge badge--warning">No image was created</span>';
+    status.textContent = `${title}. ${copy}`;
   };
 
   const setSource = async (file) => {
@@ -2726,12 +2749,16 @@ async function initTryPage() {
         window.setTimeout(() => {
           if (!state.byok.hasCredentials && byokStatusTitle && byokStatusDetail) {
             byokStatusTitle.textContent = '⚡ Nice result. Want unlimited runs?';
-            byokStatusDetail.textContent = 'Add your Cloudflare key now to keep transforming without demo caps.';
+            byokStatusDetail.textContent = 'Add your Cloudflare key now to keep transforming without free-tier caps.';
           }
         }, 1600);
       }
       track('filter_transform', { filterId: state.filter.id, mode: result.mode });
     } catch (error) {
+      if (error?.code === 'daily_limit_reached' || error?.code === 'daily_neuron_budget_reached') {
+        showBudgetState(error);
+        return;
+      }
       const message = error?.message || 'The transform shell hit an error. Try a different photo or filter.';
       status.textContent = message;
       showToast(`Transform failed: ${message}`);
