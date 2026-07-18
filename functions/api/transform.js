@@ -5,7 +5,7 @@ import { ApiError } from "../_lib/errors.js";
 import { getFilterById, loadManifest } from "../_lib/manifest.js";
 import { readTransformRequest } from "../_lib/request.js";
 import { getStoredImage, putImageObject } from "../_lib/storage.js";
-import { assertWithinUsageLimits, getUsageSnapshot, recordSuccessfulTransform, saveJobStatus } from "../_lib/usage.js";
+import { assertWithinUsageLimits, getUsageSnapshot, incrementUsageCounter, recordSuccessfulTransform, saveJobStatus } from "../_lib/usage.js";
 
 export function onRequestOptions(context) {
   return preflight(context.request, "POST,OPTIONS");
@@ -116,6 +116,9 @@ export async function onRequestPost(context) {
     }
 
     const transformResult = await executeTransform(context, loaded.filter, loaded.manifest, requestData);
+    if (!usageSnapshot) {
+      await incrementUsageCounter(context, "transform_real_success");
+    }
     if (storageMode === "direct") {
       const usageAfter = usageSnapshot
         ? await recordSuccessfulTransform(context, usageSnapshot, {

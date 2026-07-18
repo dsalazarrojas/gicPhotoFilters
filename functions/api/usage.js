@@ -1,6 +1,7 @@
 import { fail, ok, preflight } from "../_lib/http.js";
+import { ApiError } from "../_lib/errors.js";
 import { getFilterById } from "../_lib/manifest.js";
-import { getUsageSnapshot } from "../_lib/usage.js";
+import { getClientIp, getDateKey, getUsageCounters, getUsageSnapshot, incrementUsageCounter, usageKey } from "../_lib/usage.js";
 
 const REFERRAL_THRESHOLD = 3;
 const REFERRAL_BONUS_TRANSFORMS = 5;
@@ -32,6 +33,19 @@ function referralCodeKey(dateKey, code) {
   return `usage:v1:referral:code:${dateKey}:${code}`;
 }
 
+async function claimReferralOwner(context, referralCode) {
+  if (!referralCode || !context.env.USAGE_KV) return;
+  const kv = context.env.USAGE_KV;
+  const dateKey = getDateKey();
+  const key = referralCodeKey(dateKey, referralCode);
+  const record = (await kv.get(key, "json")) || { code: referralCode, dateKey, uniqueVisits: 0, sources: {}, trendId: "" };
+  if (!record.ownerIp) {
+    record.ownerIp = getClientIp(context.request);
+    record.ownerClaimedAt = new Date().toISOString();
+    await kv.put(key, JSON.stringify(record), { expirationTtl: 86_400 });
+  }
+}
+
 async function applyReferralTracking(context, snapshot, { referralCode, trendId, source }) {
   if (!referralCode || !context.env.USAGE_KV) return null;
   const kv = context.env.USAGE_KV;
@@ -53,15 +67,27 @@ async function applyReferralTracking(context, snapshot, { referralCode, trendId,
   };
 
   if (isNewReferral) {
-    const bonusDelta = priorBonus >= REFERRAL_MAX_BONUS_PER_DAY ? 0 : 1;
-    const nextIpRecord = {
-      ...snapshot.ipRecord,
-      bonusTransforms: Math.min(REFERRAL_MAX_BONUS_PER_DAY, priorBonus + bonusDelta),
+    const nextUniqueVisits = Number(codeRecord.uniqueVisits || 0) + 1;
+    const reachedThreshold = nextUniqueVisits >= REFERRAL_THRESHOLD && priorBonus < REFERRAL_MAX_BONUS_PER_DAY;
+    const bonusDelta = reachedThreshold ? REFERRAL_BONUS_TRANSFORMS : 0;
+    const ownerIp = codeRecord.ownerIp || snapshot.ip;
+    const ownerKey = usageKey(ownerIp, snapshot.dateKey);
+    const ownerRecord = ownerIp === snapshot.ip
+      ? snapshot.ipRecord
+      : (await kv.get(ownerKey, "json")) || { dateKey: snapshot.dateKey, used: 0, limit: snapshot.config.maxFreeTransformsPerIp, baseLimit: snapshot.config.maxFreeTransformsPerIp, bonusTransforms: 0, neuronsUsed: 0 };
+    const nextOwnerRecord = {
+      ...ownerRecord,
+      bonusTransforms: Math.min(REFERRAL_MAX_BONUS_PER_DAY, Number(ownerRecord.bonusTransforms || 0) + bonusDelta),
       referralCode,
       referralBonusUpdatedAt: now,
       updatedAt: now,
     };
-    codeRecord.uniqueVisits += 1;
+    const nextIpRecord = ownerIp === snapshot.ip ? nextOwnerRecord : {
+      ...snapshot.ipRecord,
+      referralCode,
+      updatedAt: now,
+    };
+    codeRecord.uniqueVisits = nextUniqueVisits;
     if (source) codeRecord.sources[source] = Number(codeRecord.sources[source] || 0) + 1;
     if (trendId) codeRecord.trendId = trendId;
     codeRecord.updatedAt = now;
@@ -76,13 +102,17 @@ async function applyReferralTracking(context, snapshot, { referralCode, trendId,
       }), { expirationTtl: snapshot.ttlSeconds }),
       kv.put(codeKey, JSON.stringify(codeRecord), { expirationTtl: snapshot.ttlSeconds }),
       kv.put(snapshot.ipKey, JSON.stringify(nextIpRecord), { expirationTtl: snapshot.ttlSeconds }),
+      ...(ownerIp === snapshot.ip ? [] : [kv.put(ownerKey, JSON.stringify(nextOwnerRecord), { expirationTtl: snapshot.ttlSeconds })]),
     ]);
+    await incrementUsageCounter(context, "referral_landed");
+    if (reachedThreshold) await incrementUsageCounter(context, "referral_bonus_granted");
 
     return {
       ...codeRecord,
       code: referralCode,
-      bonusTransforms: nextIpRecord.bonusTransforms,
-      bonusAwarded: bonusDelta,
+      bonusTransforms: nextOwnerRecord.bonusTransforms,
+      bonusAwarded: ownerIp === snapshot.ip ? bonusDelta : 0,
+      ownerBonusAwarded: bonusDelta,
       threshold: REFERRAL_THRESHOLD,
       bonusTarget: REFERRAL_BONUS_TRANSFORMS,
       progress: Math.min(codeRecord.uniqueVisits, REFERRAL_THRESHOLD),
@@ -113,6 +143,19 @@ export function onRequestOptions(context) {
 export async function onRequestGet(context) {
   try {
     const url = new URL(context.request.url);
+    if (url.searchParams.get("view") === "counters") {
+      return ok(context.request, await getUsageCounters(context), { methods: "GET,OPTIONS" });
+    }
+    const eventName = url.searchParams.get("event")?.trim();
+    if (eventName) {
+      const eventReferralCode = sanitizeReferralCode(url.searchParams.get("ref") || url.searchParams.get("referral"));
+      if (eventName === "share_opened" && eventReferralCode) await claimReferralOwner(context, eventReferralCode);
+      const counters = await incrementUsageCounter(context, eventName);
+      if (!counters) {
+        throw new ApiError(400, "unsupported_usage_event", "Unsupported usage counter event.", { event: eventName });
+      }
+      return ok(context.request, { event: eventName, counters: counters.counters }, { methods: "GET,OPTIONS" });
+    }
     const filterId = url.searchParams.get("filterId")?.trim();
     const referralCode = sanitizeReferralCode(url.searchParams.get("ref") || url.searchParams.get("referral"));
     const trendId = sanitizeToken(url.searchParams.get("trend"), 40);

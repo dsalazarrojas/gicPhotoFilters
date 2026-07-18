@@ -26,12 +26,26 @@ function requireUsageKv(env) {
   return env.USAGE_KV;
 }
 
-function usageKey(ip, dateKey) {
+export function usageKey(ip, dateKey) {
   return `usage:v1:ip:${dateKey}:${ip}`;
 }
 
 function siteUsageKey(dateKey) {
   return `usage:v1:site:${dateKey}`;
+}
+
+export const LOOP_COUNTER_EVENTS = Object.freeze([
+  "transform_real_success",
+  "share_opened",
+  "share_completed",
+  "referral_landed",
+  "referral_bonus_granted",
+]);
+
+const LOOP_COUNTER_EVENT_SET = new Set(LOOP_COUNTER_EVENTS);
+
+function counterKey(dateKey) {
+  return `usage:v1:counters:${dateKey}`;
 }
 
 function jobKey(jobId) {
@@ -119,6 +133,27 @@ export async function getUsageSnapshot(context, { filter } = {}) {
   };
 }
 
+export async function incrementUsageCounter(context, eventName, amount = 1) {
+  if (!LOOP_COUNTER_EVENT_SET.has(eventName)) return null;
+  const kv = requireUsageKv(context.env);
+  const dateKey = getDateKey();
+  const key = counterKey(dateKey);
+  const record = await getJson(kv, key, { dateKey, updatedAt: null, counters: {} });
+  const counters = { ...record.counters };
+  counters[eventName] = Math.max(0, toSafeInteger(counters[eventName], 0)) + Math.max(1, toSafeInteger(amount, 1));
+  const next = { dateKey, counters, updatedAt: new Date().toISOString() };
+  await kv.put(key, JSON.stringify(next), { expirationTtl: secondsUntilReset() });
+  return next;
+}
+
+export async function getUsageCounters(context) {
+  const kv = requireUsageKv(context.env);
+  const dateKey = getDateKey();
+  const record = await getJson(kv, counterKey(dateKey), { dateKey, updatedAt: null, counters: {} });
+  const counters = Object.fromEntries(LOOP_COUNTER_EVENTS.map((eventName) => [eventName, toSafeInteger(record.counters?.[eventName], 0)]));
+  return { dateKey, counters, updatedAt: record.updatedAt || null };
+}
+
 export function assertWithinUsageLimits(snapshot, estimatedNeurons) {
   if (snapshot.ipRecord.used >= snapshot.limit) {
     throw new ApiError(429, "daily_limit_reached", "Free daily transform limit reached for this IP.", {
@@ -164,6 +199,7 @@ export async function recordSuccessfulTransform(context, snapshot, { estimatedNe
   await Promise.all([
     kv.put(snapshot.ipKey, JSON.stringify(nextIpRecord), { expirationTtl: snapshot.ttlSeconds }),
     kv.put(snapshot.siteKey, JSON.stringify(nextSiteRecord), { expirationTtl: snapshot.ttlSeconds }),
+    incrementUsageCounter(context, "transform_real_success"),
   ]);
 
   return {

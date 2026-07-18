@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "check:backend": "find functions -name '*.js' -print0 | xargs -0 -n1 node --check",
-    "generate:previews": "node scripts/generate-previews.js"
+    "generate:previews": "node scripts/generate-previews.js",
+    "test:phase2": "node scripts/test-phase2.mjs"
   }
 }

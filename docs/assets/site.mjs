@@ -376,7 +376,18 @@ function buildTryHref(filter) {
 
 function buildReferralCode(filter) {
   const basis = filter?.slug || filter?.id || filter?.name || 'gic';
-  return `${slugify(basis).slice(0, 26) || 'gic'}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+  const dateKey = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const storageKey = `gic-referral-code:${slugify(basis).slice(0, 26) || 'gic'}:${dateKey}`;
+  try {
+    const existing = localStorage.getItem(storageKey);
+    if (existing) return existing;
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const code = `${slugify(basis).slice(0, 18) || 'gic'}-${dateKey}-${suffix}`;
+    localStorage.setItem(storageKey, code);
+    return code;
+  } catch {
+    return `${slugify(basis).slice(0, 18) || 'gic'}-${dateKey}`;
+  }
 }
 
 function buildTryShareUrl(filter, options = {}) {
@@ -1127,6 +1138,20 @@ function track(eventName, detail = {}) {
   window.dispatchEvent(new CustomEvent(`gic:${eventName}`, { detail }));
 }
 
+const LOOP_COUNTER_EVENTS = new Set([
+  'transform_real_success',
+  'share_opened',
+  'share_completed',
+  'referral_landed',
+  'referral_bonus_granted',
+]);
+
+function recordLoopCounter(eventName, params = {}) {
+  if (!hasDom || !LOOP_COUNTER_EVENTS.has(eventName)) return;
+  const query = new URLSearchParams({ event: eventName, ...params });
+  void fetch(`/api/usage?${query}`, { cache: 'no-store' }).catch(() => {});
+}
+
 function getUsageSnapshot() {
   const today = new Date().toISOString().slice(0, 10);
   try {
@@ -1321,11 +1346,30 @@ function createSelectionMarkup(filters) {
     </article>`).join('');
 }
 
-function loadImage(url) {
+function loadImage(source) {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = reject;
+    let objectUrl = '';
+    image.decoding = 'async';
+    image.onload = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = (error) => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      reject(error);
+    };
+    if (source instanceof Blob) {
+      objectUrl = URL.createObjectURL(source);
+      image.src = objectUrl;
+      return;
+    }
+    const url = String(source || '');
+    if (!url) {
+      reject(new Error('image_source_missing'));
+      return;
+    }
+    if (/^https?:/i.test(url) && !/^blob:/i.test(url)) image.crossOrigin = 'anonymous';
     image.src = url;
   });
 }
@@ -1338,6 +1382,7 @@ async function createShareCollage({ beforeUrl, afterUrl, filterName, trendLabel 
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
+  if (!context) throw new Error('share_collage_canvas_unavailable');
   const half = width / 2;
   context.fillStyle = '#0f172a';
   context.fillRect(0, 0, width, height);
@@ -1380,6 +1425,7 @@ async function createShareCollage({ beforeUrl, afterUrl, filterName, trendLabel 
   context.fillText('AFTER', width - 188, 69);
 
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+  if (!blob) throw new Error('share_collage_blob_unavailable');
   return {
     blob,
     dataUrl: canvas.toDataURL('image/jpeg', 0.92),
@@ -2005,8 +2051,8 @@ async function initTryPage() {
   const transformButton = document.getElementById('transform-button');
   const resetButton = document.getElementById('reset-photo-button');
   const downloadButton = document.getElementById('download-button');
-  const shareFilterButton = document.getElementById('share-filter-button');
   const shareResultButton = document.getElementById('share-result-button');
+  const tryAnotherTrendButton = document.getElementById('try-another-trend-button');
   const status = document.getElementById('try-status');
   const progress = document.getElementById('try-progress');
   const stageSlot = document.getElementById('stage-slot');
@@ -2016,6 +2062,7 @@ async function initTryPage() {
   const effectsControls = document.getElementById('effects-controls');
   const intensityInput = document.getElementById('effects-intensity');
   const resultActions = document.getElementById('result-actions');
+  const shareNudge = document.getElementById('share-nudge');
   const overviewTab = document.getElementById('tab-overview');
   const helpTab = document.getElementById('tab-help');
   const techTab = document.getElementById('tab-tech');
@@ -2042,10 +2089,10 @@ async function initTryPage() {
   const trendShortcuts = document.getElementById('try-trend-shortcuts');
   const shareOverlay = document.getElementById('share-overlay');
   const shareOverlayTitle = document.getElementById('share-overlay-title');
-  const shareOverlayCopy = document.getElementById('share-overlay-copy');
+  const shareOverlayCopy = document.getElementById('share-overlay-description');
   const shareOverlayPreview = document.getElementById('share-overlay-preview');
   const shareOverlayNative = document.getElementById('share-overlay-native');
-  const shareOverlayCopyButton = document.getElementById('share-overlay-copy');
+  const shareOverlayCopyButton = document.getElementById('share-overlay-copy-button');
   const shareOverlayCopyImage = document.getElementById('share-overlay-copy-image');
   const params = new URLSearchParams(window.location.search);
   const requestedId = params.get('id');
@@ -2471,7 +2518,6 @@ async function initTryPage() {
       initBeforeAfterSliders(stageSlot);
       stageNote.innerHTML = getStageBadge(filter);
       if (shareResultButton) shareResultButton.disabled = true;
-      if (shareFilterButton) shareFilterButton.disabled = false;
       return;
     }
     const current = state.variants[state.activeVariantIndex] || state.variants[0];
@@ -2494,7 +2540,6 @@ async function initTryPage() {
     initBeforeAfterSliders(stageSlot);
     stageNote.innerHTML = getStageBadge(filter);
     if (shareResultButton) shareResultButton.disabled = !state.variants.length;
-    if (shareFilterButton) shareFilterButton.disabled = false;
   };
 
   const openShareOverlay = async ({ budgetBlocked = false } = {}) => {
@@ -2503,6 +2548,8 @@ async function initTryPage() {
     if (!current && !budgetBlocked) return;
     const shareContext = buildShareContext();
     state.shareContext = shareContext;
+    recordLoopCounter('share_opened', { ref: shareContext.referral });
+    track('share_opened', { filterId: state.filter.id, budgetBlocked });
     if (shareOverlayTitle) shareOverlayTitle.textContent = budgetBlocked
       ? 'Share GIC Photo Filters to earn more transforms'
       : `Your ${state.filter.name} result is ready`;
@@ -2817,12 +2864,6 @@ async function initTryPage() {
     }
   };
 
-  shareFilterButton?.addEventListener('click', async () => {
-    state.shareContext = buildShareContext();
-    const shared = await runShareFlow();
-    if (shared) track('filter_share', { filterId: state.filter.id, source: 'try-filter' });
-  });
-
   shareResultButton?.addEventListener('click', async () => {
     if (!state.filter) return;
     const current = state.variants[state.activeVariantIndex];
@@ -2834,9 +2875,37 @@ async function initTryPage() {
     track('filter_share_result_open', { filterId: state.filter.id, mode: state.outputMode || 'preview' });
   });
 
+  tryAnotherTrendButton?.addEventListener('click', () => {
+    const nextTrend = activeTrends.find((trend) => trend.primaryFilter?.id !== state.filter?.id) || activeTrends[0];
+    if (nextTrend?.primaryFilter) {
+      window.location.href = `${buildTryHref(nextTrend.primaryFilter)}&trend=${encodeURIComponent(nextTrend.id)}`;
+      return;
+    }
+    window.location.href = '/browse.html';
+  });
+
+  const showShareNudge = () => {
+    if (!shareNudge) return;
+    const usage = state.demoUsage;
+    const remaining = Number(usage?.remaining);
+    shareNudge.classList.remove('hidden');
+    shareNudge.textContent = Number.isFinite(remaining)
+      ? `Nice — your result is shared. You have ${remaining} free transform${remaining === 1 ? '' : 's'} left; share with more friends to earn ${catalog.referralBonusTransforms || 5} more at the referral threshold.`
+      : `Nice — your result is shared. Invite friends with your referral link to earn ${catalog.referralBonusTransforms || 5} more transforms.`;
+  };
+
+  const markShareCompleted = (channel) => {
+    recordLoopCounter('share_completed');
+    track('share_completed', { filterId: state.filter?.id || '', mode: state.outputMode || 'api', channel });
+    showShareNudge();
+  };
+
   shareOverlayNative?.addEventListener('click', async () => {
     const shared = await runShareFlow({ includeImage: true });
-    if (shared) track('filter_share_result', { filterId: state.filter?.id || '', mode: state.outputMode || 'preview', channel: 'native' });
+    if (shared) {
+      track('filter_share_result', { filterId: state.filter?.id || '', mode: state.outputMode || 'preview', channel: 'native' });
+      markShareCompleted('native');
+    }
   });
   shareOverlayCopyButton?.addEventListener('click', async () => {
     const shareContext = state.shareContext || buildShareContext();
@@ -2844,6 +2913,7 @@ async function initTryPage() {
       await navigator.clipboard.writeText(shareContext.shareText);
       showToast('Caption + referral link copied.');
       track('filter_share_result', { filterId: state.filter?.id || '', mode: state.outputMode || 'preview', channel: 'copy' });
+      markShareCompleted('copy');
     } catch {
       showToast('Unable to copy share text.');
     }
