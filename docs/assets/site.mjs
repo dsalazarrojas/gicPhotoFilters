@@ -1507,9 +1507,12 @@ async function attemptApiTransform(filter, blob, intensity = 0.65, byok = {}, op
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    const error = new Error(payload?.error?.message || `Transform failed with ${response.status}`);
+    const baseMessage = payload?.error?.message || `Transform failed with ${response.status}`;
+    const cause = payload?.error?.details?.cause;
+    const error = new Error(cause && cause !== baseMessage ? `${baseMessage} (${cause})` : baseMessage);
     error.code = payload?.error?.code || '';
     error.status = response.status;
+    error.details = payload?.error?.details || null;
     throw error;
   }
   const storageMode = response.headers.get('x-storage-mode') || 'r2';
