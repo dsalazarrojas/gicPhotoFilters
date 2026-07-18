@@ -5,7 +5,12 @@ const BUILT_IN_MODELS = {
   "flux2-klein-9b": {
     id: "@cf/black-forest-labs/flux-2-klein-9b",
     name: "FLUX.2 Klein 9B",
-    neuronsPerRun: 150,
+    // Estimate, not a measured value: Cloudflare bills flux-2-klein-9b at
+    // 1363.64 neurons for the first output MP (our 768x768 output falls in
+    // that flat tier) + 181.82 neurons/MP of input image (our 512x512 input
+    // cap ≈ 0.25MP ≈ 45 neurons) ≈ 1410 neurons/run. Confirm against a real
+    // Cloudflare dashboard run before treating this as exact.
+    neuronsPerRun: 1410,
     supportsImg2Img: true,
     supportsInpainting: false,
   },

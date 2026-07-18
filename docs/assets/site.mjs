@@ -109,7 +109,7 @@ const FALLBACK_CATALOG = {
     },
   },
   models: {
-    'flux2-klein-9b': { id: '@cf/black-forest-labs/flux-2-klein-9b', name: 'FLUX.2 Klein 9B', neuronsPerRun: 150 },
+    'flux2-klein-9b': { id: '@cf/black-forest-labs/flux-2-klein-9b', name: 'FLUX.2 Klein 9B', neuronsPerRun: 1410 },
     'flux2-klein-4b': { id: '@cf/black-forest-labs/flux-2-klein-4b', name: 'FLUX.2 Klein 4B', neuronsPerRun: 80 },
     'client-side': { id: 'client-side', name: 'Browser (no AI)', neuronsPerRun: 0 },
   },
