@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["54M392L376.gic.GIC-Photo-Filters"],
+        "components": [
+          { "/": "/try.html", "comment": "Filter try pages" },
+          { "/": "/try.html/*", "comment": "Filter try pages with paths" }
+        ]
+      }
+    ]
+  }
+}
