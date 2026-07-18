@@ -150,4 +150,27 @@ Using "CF_ACCOUNT_ID" environment variable. This is deprecated. Please use "CLOU
 
 ```text
 PENDING — requires a human two-network run; no post-test output is claimed here.
+
+## SHR-202 quota classification — 2026-07-17
+
+```text
+> node scripts/test-quota-classification.mjs
+TEST SUCCEEDED
+
+> npm run check:backend
+> check:backend
+> find functions -name '*.js' -print0 | xargs -0 -n1 node --check
+
+> node --check docs/assets/site.mjs
+
+> git diff --check
+```
+
+```json
+{"timestamp":"2026-07-18T04:06:37.887Z","requestId":"a1ce9d649b91da10","ok":false,"error":{"code":"workers_ai_failed","message":"Workers AI failed while running model \"@cf/black-forest-labs/flux-2-klein-9b\".","retryable":true,"details":{"filterId":"grinch-ify--holiday_seasonal","modelId":"@cf/black-forest-labs/flux-2-klein-9b","cause":"4006: you have used up your daily free allocation of 10,000 neurons, please upgrade to Cloudflare's Workers Paid plan if you would like to continue usage."}}}
+```
+
+```text
+> curl -sS -X POST -F 'image=@docs/assets/sample-photos/portrait_a.jpg' -F 'filterId=grinch-ify--holiday_seasonal' https://gicphotofilters.pages.dev/api/transform
+```
 ```

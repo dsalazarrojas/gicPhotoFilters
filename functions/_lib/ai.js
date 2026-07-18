@@ -243,10 +243,23 @@ export async function executeTransform(context, filter, manifest, requestData) {
         result = await context.env.AI.run(modelDefinition.id, input);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (/\b4006\b/.test(errorMessage) || /daily free allocation/i.test(errorMessage)) {
+        throw new ApiError(
+          429,
+          "workers_ai_account_quota_exhausted",
+          "Cloudflare's real Workers AI daily quota is exhausted for this account — this is separate from this site's own tracked budget.",
+          {
+            modelId: modelDefinition.id,
+            filterId: filter.id,
+            cause: errorMessage,
+          },
+        );
+      }
       throw new ApiError(502, "workers_ai_failed", `Workers AI failed while running model "${modelDefinition.id}".`, {
         filterId: filter.id,
         modelId: modelDefinition.id,
-        cause: error instanceof Error ? error.message : String(error),
+        cause: errorMessage,
       });
     }
 

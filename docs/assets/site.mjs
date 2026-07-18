@@ -2592,7 +2592,7 @@ async function initTryPage() {
   };
 
   const showBudgetState = (error) => {
-    const siteWide = error?.code === 'daily_neuron_budget_reached';
+    const siteWide = error?.code === 'daily_neuron_budget_reached' || error?.code === 'workers_ai_account_quota_exhausted';
     const title = siteWide ? 'Today’s free transform budget is spent' : 'You’ve used today’s free transforms';
     const copy = siteWide
       ? 'The site-wide free transform budget is spent for today. Share to earn more, or use your own Cloudflare key. Resets at midnight UTC.'
@@ -2805,7 +2805,7 @@ async function initTryPage() {
       }
       track('filter_transform', { filterId: state.filter.id, mode: result.mode });
     } catch (error) {
-      if (error?.code === 'daily_limit_reached' || error?.code === 'daily_neuron_budget_reached') {
+      if (error?.code === 'daily_limit_reached' || error?.code === 'daily_neuron_budget_reached' || error?.code === 'workers_ai_account_quota_exhausted') {
         showBudgetState(error);
         return;
       }
