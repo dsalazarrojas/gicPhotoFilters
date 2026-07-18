@@ -87,6 +87,11 @@ for (const run of runs) {
       const page = await context.newPage();
       try {
         await page.goto(`${baseUrl}/try.html?id=${encodeURIComponent(filter.id)}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+        // The file-input "change" listener is only registered once the page's async catalog
+        // fetch resolves inside initTryPage(); domcontentloaded fires before that. Uploading
+        // before this badge appears fires "change" into the void (silently ignored) instead of
+        // triggering setSource(). Wait for the initial catalog-ready badge first.
+        await page.locator("#stage-note .badge").first().waitFor({ state: "visible", timeout: 15_000 });
         await page.locator("#file-input").setInputFiles(sourceFile);
         await page.locator("#stage-note").getByText("Ready to transform").waitFor({ state: "visible", timeout: 15_000 });
         await page.locator("#transform-button").click();
