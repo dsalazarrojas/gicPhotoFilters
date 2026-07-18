@@ -1386,7 +1386,7 @@ async function createShareCollage({ beforeUrl, afterUrl, filterName, trendLabel 
   };
 }
 
-async function resizeFile(file, maxDimension = 1024) {
+async function resizeFile(file, maxDimension = 512) {
   const originalUrl = URL.createObjectURL(file);
   const image = await loadImage(originalUrl);
   const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
@@ -2580,7 +2580,7 @@ async function initTryPage() {
       showToast('Please keep uploads below 5MB.');
       return;
     }
-    const resized = await resizeFile(file, 1024);
+    const resized = await resizeFile(file, 512);
     state.sourceBlob = resized.blob;
     state.sourceDataUrl = resized.dataUrl;
     state.variants = [];
@@ -3253,7 +3253,7 @@ async function initBuildPage() {
       showToast('Please keep uploads below 5MB.');
       return;
     }
-    const resized = await resizeFile(file, 1024);
+    const resized = await resizeFile(file, 512);
     state.sourceBlob = resized.blob;
     state.sourceDataUrl = resized.dataUrl;
     state.resultImages = [];

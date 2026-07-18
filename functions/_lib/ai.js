@@ -1,4 +1,4 @@
-import { runCloudflareModel } from "./cloudflare.js";
+import { buildMultipartWorkersAiForm, runCloudflareModel, usesMultipartWorkersAi } from "./cloudflare.js";
 import { ApiError, assert, missingBindingError, notImplementedError } from "./errors.js";
 
 const BUILT_IN_MODELS = {
@@ -225,7 +225,18 @@ export async function executeTransform(context, filter, manifest, requestData) {
 
     let result;
     try {
-      result = await context.env.AI.run(modelDefinition.id, input);
+      if (usesMultipartWorkersAi(modelDefinition.id)) {
+        const form = buildMultipartWorkersAiForm(input);
+        const formResponse = new Response(form);
+        result = await context.env.AI.run(modelDefinition.id, {
+          multipart: {
+            body: formResponse.body,
+            contentType: formResponse.headers.get("content-type"),
+          },
+        });
+      } else {
+        result = await context.env.AI.run(modelDefinition.id, input);
+      }
     } catch (error) {
       throw new ApiError(502, "workers_ai_failed", `Workers AI failed while running model "${modelDefinition.id}".`, {
         filterId: filter.id,

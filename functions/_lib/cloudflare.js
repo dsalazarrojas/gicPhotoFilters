@@ -83,21 +83,17 @@ function toUint8Array(value) {
   return null;
 }
 
-function usesMultipartWorkersAi(modelId) {
+// FLUX.2 models (klein-9b, klein-4b, dev) take a multipart/form-data body with an
+// "input_image_0" file field, not the plain-JSON "image" byte-array body the older
+// Stable Diffusion img2img/inpainting models use. See:
+// https://developers.cloudflare.com/workers-ai/models/flux-2-klein-9b/
+export function usesMultipartWorkersAi(modelId) {
   return typeof modelId === "string" && modelId.includes("/flux-2-");
 }
 
-function buildWorkersAiFetchOptions({ apiToken, modelId, input }) {
-  if (!usesMultipartWorkersAi(modelId)) {
-    return {
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(input),
-    };
-  }
-
+// Shared between the BYOK REST proxy (fetch) and the direct env.AI binding call —
+// both need the same FormData shape for FLUX.2 models, just wrapped differently.
+export function buildMultipartWorkersAiForm(input) {
   const form = new FormData();
   const imageBytes = toUint8Array(input?.image);
 
@@ -112,11 +108,25 @@ function buildWorkersAiFetchOptions({ apiToken, modelId, input }) {
     form.set("input_image_0", new Blob([imageBytes], { type: "image/jpeg" }), "input.jpg");
   }
 
+  return form;
+}
+
+function buildWorkersAiFetchOptions({ apiToken, modelId, input }) {
+  if (!usesMultipartWorkersAi(modelId)) {
+    return {
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(input),
+    };
+  }
+
   return {
     headers: {
       Authorization: `Bearer ${apiToken}`,
     },
-    body: form,
+    body: buildMultipartWorkersAiForm(input),
   };
 }
 
