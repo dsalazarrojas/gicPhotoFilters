@@ -804,3 +804,4 @@ S6 (Portrait + Script) ───────────────────
 - Phase K — Cross-promotion with other GIC sites
 - Phase O — Final launch QA checklist
 - S6 remaining portraits (portraits b–f) and multi-portrait per filter — generate over time as needed
+# SUPERSEDED — execution moved to [TODO_PRODUCT_V1_FOCUSED.md](TODO_PRODUCT_V1_FOCUSED.md).

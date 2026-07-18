@@ -720,11 +720,10 @@ function renderFilterCard(filter, options = {}) {
         </div>
         <div class="filter-card__meta">
           <span class="meta-text">${capitalize(filter.type)}</span>
-          <span class="meta-text">${escapeHtml(filter.modelLabel)}</span>
-          <span class="meta-text">${filter.estimatedNeurons} neurons</span>
+          <span class="meta-text">${filter.clientSideOnly ? 'Runs in your browser' : 'AI-powered transform'}</span>
         </div>
         <div class="filter-card__actions">
-          <a class="button" href="${tryHref}">Try</a>
+          <a class="button" href="${tryHref}">Try this filter</a>
           <a class="button-ghost" href="${detailsHref}">Details</a>
           <button
             class="button-ghost"
@@ -926,17 +925,14 @@ function renderHeader(page) {
     browse: '/browse.html',
     trends: '/trends.html',
     try: '/try.html',
+    advanced: '/advanced.html',
     'category-index': '/categories/index.html',
     'category-detail': '/categories/index.html',
   };
   const currentHref = pageToHref[page] || '/';
   const navItems = [
-    ['Trends', '/trends.html'],
     ['Browse', '/browse.html'],
-    ['Try', '/try.html'],
-    ['Build', '/build.html'],
-    ['Categories', '/categories/index.html'],
-    ['Get App', SITE.appLink],
+    ['Advanced', '/advanced.html'],
   ];
   return `
     <div class="site-header__inner">
@@ -951,18 +947,12 @@ function renderHeader(page) {
         ${navItems.map(([label, href]) => `<a href="${href}" ${href === currentHref ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
       </nav>
       <div class="header-actions">
-        <button class="button-ghost settings-trigger" type="button" data-settings-trigger data-configured="false" aria-label="Open Cloudflare settings">
-          <span class="settings-trigger__icon" aria-hidden="true">⚙</span>
-          <span class="settings-trigger__dot" aria-hidden="true"></span>
-          <span data-settings-label>Settings</span>
-        </button>
         <div class="theme-menu">
           <button class="button-ghost" type="button" id="theme-menu-button" aria-haspopup="true" aria-expanded="false">Theme</button>
           <div class="theme-menu__panel" id="theme-menu-panel" hidden>
             ${['system', 'light', 'dark'].map((theme) => `<button class="theme-option" type="button" data-theme-value="${theme}">${capitalize(theme)}</button>`).join('')}
           </div>
         </div>
-        <a class="button" href="/try.html">Try a Filter</a>
       </div>
     </div>`;
 }
@@ -983,12 +973,11 @@ function renderFooter() {
         </div>
         <div class="footer-column">
           <strong>Explore</strong>
-          <a href="/trends.html">Trending now</a>
+          <a href="/#trends">Trending now</a>
           <a href="/browse.html">Browse filters</a>
           <a href="/try.html">Try a filter</a>
-          <a href="/build.html">Build a filter</a>
+          <a href="/advanced.html">Advanced</a>
           <a href="/categories/index.html">Categories</a>
-          <a href="/about.html#app-availability">Get the app</a>
         </div>
         <div class="footer-column">
           <strong>GIC ecosystem</strong>
@@ -1195,8 +1184,8 @@ function renderUsageGrid(target, catalog, filter = null, usageSnapshot = null) {
   target.innerHTML = `
     ${renderKpi('Free transforms today', `${used} of ${limit}`, `${remainingFree} free transforms remaining${bonusLimit ? ` · +${bonusLimit} referral bonus` : ''}`)}
     ${renderKpi('Referral bonus', bonusLimit ? `+${bonusLimit} unlocked` : `+${catalog.referralBonusTransforms || 5} pending`, referralLine)}
-    ${renderKpi('Current filter', filter ? escapeHtml(filter.name) : 'Choose a filter', currentCost)}
-    ${renderKpi('Unlimited option', 'Companion app', 'Bring your own API key later for full access')}`;
+    ${renderKpi('Current filter', filter ? escapeHtml(filter.name) : 'Choose a filter', 'Ready when you are')}
+    ${renderKpi('Unlimited option', 'Advanced', 'Bring your own API key when you need it')}`;
 }
 
 function markdownToHtml(markdown = '') {
@@ -1653,7 +1642,6 @@ function renderOverview(filter) {
       <ul>
         <li><strong>Type:</strong> ${escapeHtml(filter.type)}</li>
         <li><strong>Demo access:</strong> ${filter.isDemoFilter ? 'Free to try on the web shell' : 'Use your own API key in the companion app'}</li>
-        <li><strong>Model:</strong> ${escapeHtml(filter.modelLabel)}</li>
         <li><strong>Share text:</strong> ${escapeHtml(filter.shareText)}</li>
       </ul>
     </div>`;
@@ -1669,7 +1657,7 @@ function renderTech(filter, catalog) {
         <li>Negative prompt: ${escapeHtml(filter.negativePrompt)}</li>
         <li>Strength ${filter.strength} · Guidance ${filter.guidance}</li>
         <li>Output target ${filter.outputWidth}×${filter.outputHeight}</li>
-        <li>Estimated neurons ${filter.estimatedNeurons} · model ${escapeHtml(model.id || filter.modelLabel)}</li>
+        <li>Catalog filter · ready for a live transform</li>
       </ul>
     </div>`;
 }
@@ -1727,7 +1715,7 @@ async function initHomePage() {
   const categoryGrid = document.getElementById('category-grid');
   const popularGrid = document.getElementById('popular-grid');
   const heroFilterName = document.getElementById('hero-filter-name');
-  const trendCarousel = document.getElementById('home-trend-carousel');
+  const trendCarousel = document.getElementById('seasonal-grid');
   const trendTemplateGrid = document.querySelector('[data-home-trend-templates]');
   renderSkeletonCards(seasonalGrid, 4);
   renderSkeletonCards(categoryGrid, 6);
@@ -1736,6 +1724,8 @@ async function initHomePage() {
   const { catalog } = info;
   renderCatalogNotice(noticeTarget, info);
   const seasonal = getSeasonalFilters(catalog.filters).slice(0, 6);
+  const trends = getActiveTrends(catalog);
+  const topTrend = trends[0] || null;
   const showcaseFilter = seasonal[0] || sortFilters(catalog.filters, 'popular')[0];
   const categories = catalog.categories?.length ? catalog.categories : CATEGORY_META;
   const liveCatalogCopy = catalog.starterCatalog ? `${catalog.filtersReady} filters live in the starter manifest` : `${catalog.filtersReady} filters live in the catalog`;
@@ -1754,6 +1744,11 @@ async function initHomePage() {
       caption: `${showcaseFilter.name} · ${showcaseFilter.categoryDisplay}`,
     });
   }
+  const primaryCta = document.getElementById('home-primary-cta-button');
+  if (primaryCta && topTrend?.primaryFilter) {
+    primaryCta.href = buildTryHref(topTrend.primaryFilter);
+    primaryCta.textContent = `Join ${topTrend.label}`;
+  }
   seasonalGrid.innerHTML = seasonal.map((filter) => renderFilterCard(filter)).join('');
   categoryGrid.innerHTML = categories.slice(0, 6).map((category) => {
     const actualCount = catalog.filters.filter((filter) => filter.category === category.id).length;
@@ -1761,10 +1756,18 @@ async function initHomePage() {
   }).join('');
   popularGrid.innerHTML = sortFilters(catalog.filters, 'popular').slice(0, 8).map((filter) => renderFilterCard(filter, { compact: true })).join('');
   if (trendCarousel) {
-    const trendCards = getActiveTrends(catalog).slice(0, 4);
+    const trendCards = trends;
     trendCarousel.innerHTML = trendCards.length
       ? trendCards.map((trend) => renderTrendCard(trend)).join('')
       : '<p class="microcopy">No active trends right now.</p>';
+  }
+  const trendProof = document.getElementById('trend-proof');
+  if (trendProof) {
+    trendProof.innerHTML = [
+      renderKpi('Live trends', `${trends.length}`, 'Ranked from the active trend calendar.'),
+      renderKpi('Catalog', `${formatNumber(catalog.totalFilters)} filters`, 'Browse the full catalog whenever you want.'),
+      renderKpi('Free to try', `${catalog.freeTransformsPerIp} daily tries`, 'No account or API key required for catalog filters.'),
+    ].join('');
   }
   if (trendTemplateGrid) {
     trendTemplateGrid.innerHTML = sortFilters(catalog.filters, 'trending')
@@ -2463,8 +2466,6 @@ async function initTryPage() {
       <p class="lead">${escapeHtml(filter.description)}</p>
       <div class="filter-summary__badges">
         <span class="badge badge--brand">${capitalize(filter.type)}</span>
-        <span class="badge">${escapeHtml(filter.modelLabel)}</span>
-        <span class="badge">${filter.estimatedNeurons} neurons</span>
         ${isCustomFilter ? '<span class="badge badge--warning">Shared custom</span>' : '<span class="badge badge--success">FREE</span>'}
         ${filter.clientSideOnly ? '<span class="badge badge--accent">Browser-only</span>' : ''}
       </div>`;
@@ -3619,6 +3620,9 @@ async function initApp() {
       break;
     case 'category-detail':
       initCategoryDetailPage();
+      break;
+    case 'advanced':
+      initStaticPage();
       break;
     default:
       initStaticPage();
