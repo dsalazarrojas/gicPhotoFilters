@@ -4,19 +4,19 @@
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <title>Try a filter · GIC Photo Filters</title>
-      <meta name="description" content="Upload a photo, preview transform flows, test client-side effects, and browse related filters in the gicPhotoFilters starter shell." />
+      <meta name="description" content="Choose a filter, upload one photo, get a real result, and share it." />
       <meta name="theme-color" content="#ec5b13" />
       <link rel="icon" href="/docs/assets/favicon.svg" type="image/svg+xml" />
       <link rel="canonical" id="canonical-link" href="https://photofilters.gic.mx/try.html" />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="GIC Photo Filters" />
       <meta property="og:title" content="Try a filter · GIC Photo Filters" />
-      <meta property="og:description" content="Upload a photo, preview transform flows, test client-side effects, and browse related filters in the gicPhotoFilters starter shell." />
+      <meta property="og:description" content="Choose a filter, upload one photo, get a real result, and share it." />
       <meta property="og:url" content="https://photofilters.gic.mx/try.html" />
       <meta property="og:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="Try a filter · GIC Photo Filters" />
-      <meta name="twitter:description" content="Upload a photo, preview transform flows, test client-side effects, and browse related filters in the gicPhotoFilters starter shell." />
+      <meta name="twitter:description" content="Choose a filter, upload one photo, get a real result, and share it." />
       <meta name="twitter:image" content="https://photofilters.gic.mx/docs/assets/social-preview.svg" />
       <link rel="stylesheet" href="/docs/assets/style.css" />
       <script type="application/ld+json" id="org-schema">{"@context": "https://schema.org", "@type": "Organization", "name": "GIC Photo Filters", "url": "https://photofilters.gic.mx", "logo": "https://photofilters.gic.mx/docs/assets/favicon.svg"}</script>
@@ -43,13 +43,13 @@
             <span class="page-eyebrow">Filter selection</span>
             <h2 id="selection-title">Popular filters to start</h2>
           </div>
-          <a class="button-link" href="/browse.html">Browse full shell</a>
+          <a class="button-link" href="/browse.html">Choose another filter</a>
         </div>
         <div class="detail-card try-trend-shortcuts hidden" id="try-trend-shortcuts"></div>
         <div class="selection-grid" id="try-selection"></div>
         <div class="upload-dropzone" id="upload-dropzone" role="button" tabindex="0" aria-describedby="upload-hint">
           <strong>Drop a JPEG, PNG, or WebP here</strong>
-          <p id="upload-hint" class="microcopy">Drag &amp; drop, click to browse, or paste from the clipboard. Best results come from a clear face photo under 5MB.</p>
+          <p id="upload-hint" class="microcopy">Choose a JPEG, PNG, or WebP under 5MB. A clear face photo works best.</p>
           <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden />
           <span class="badge badge--brand">Client-side resize to 512px</span>
         </div>
@@ -99,7 +99,7 @@
           <p class="microcopy byok-panel__note">Credentials stay in this browser and are sent only to <code>/api/health</code> and <code>/api/transform</code> as HTTPS request headers. They are never stored server-side.</p>
         </div>
         <div class="upload-actions">
-          <button class="button" id="transform-button" type="button">Transform — FREE ✨</button>
+          <button class="button" id="transform-button" type="button">Transform</button>
           <button class="button-ghost" id="reset-photo-button" type="button">Try another photo</button>
         </div>
         <details class="detail-card" open>

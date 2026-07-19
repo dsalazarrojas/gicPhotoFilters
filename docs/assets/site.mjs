@@ -2168,6 +2168,8 @@ async function initTryPage() {
     helpHtml: '',
     customLinkError: requestedCustomError,
     shareContext: null,
+    transformTimedOut: false,
+    transformController: null,
   };
 
   const buildHealthMessage = (remaining) => `Connected — ${formatNumber(Math.max(0, Number(remaining) || 0))} neurons available today.`;
@@ -2620,18 +2622,94 @@ async function initTryPage() {
     status.textContent = `${title}. ${copy}`;
   };
 
+  const showTryErrorState = (kind, error = null) => {
+    const states = {
+      model_timeout: {
+        badge: 'Model timeout',
+        title: 'That took too long',
+        copy: 'The image service did not finish in time. Your photo is still here, so you can try again.',
+        next: 'Try again, or choose a browser effect for an instant result.',
+        action: 'Try again',
+        tone: 'warning',
+      },
+      upload_too_large: {
+        badge: 'File too large',
+        title: 'Keep the photo under 5MB',
+        copy: 'This file is too big for a quick mobile upload. Choose a smaller photo and try again.',
+        next: 'Use a compressed photo or take a new one with the camera.',
+        action: 'Choose another photo',
+        tone: 'warning',
+      },
+      unsupported_format: {
+        badge: 'Unsupported format',
+        title: 'Use a JPEG, PNG, or WebP',
+        copy: 'This file type cannot be transformed here.',
+        next: 'Export the image as JPEG, PNG, or WebP, then choose it again.',
+        action: 'Choose another photo',
+        tone: 'warning',
+      },
+      offline: {
+        badge: 'You are offline',
+        title: 'No connection right now',
+        copy: 'A live transform needs an internet connection. Nothing was uploaded.',
+        next: 'Reconnect to the internet and try again. Browser-only effects still work offline.',
+        action: 'Try again',
+        tone: 'warning',
+      },
+    };
+    const view = states[kind] || {
+      badge: 'Try again',
+      title: 'We could not finish that transform',
+      copy: error?.message || 'The image service is unavailable right now.',
+      next: 'Check your photo and connection, then try again.',
+      action: 'Try again',
+      tone: 'warning',
+    };
+    resultActions.classList.add('hidden');
+    variantsTarget.innerHTML = '';
+    stageNote.innerHTML = `<span class="badge badge--${escapeHtml(view.tone)}">${escapeHtml(view.badge)}</span>`;
+    stageSlot.innerHTML = `
+      <div class="empty-state try-error-state" data-error-state="${escapeHtml(kind)}">
+        <span class="page-eyebrow">Next step</span>
+        <h3>${escapeHtml(view.title)}</h3>
+        <p>${escapeHtml(view.copy)}</p>
+        <p class="microcopy">${escapeHtml(view.next)}</p>
+        <div class="card-actions"><button class="button" type="button" data-error-action>${escapeHtml(view.action)}</button><a class="button-ghost" href="/browse.html">Choose another filter</a></div>
+      </div>`;
+    status.textContent = `${view.title}. ${view.next}`;
+    const action = stageSlot.querySelector('[data-error-action]');
+    action?.addEventListener('click', () => {
+      if (kind === 'offline' && !navigator.onLine) {
+        showTryErrorState('offline');
+        return;
+      }
+      if (kind === 'upload_too_large' || kind === 'unsupported_format') {
+        fileInput.click();
+        return;
+      }
+      if (state.sourceBlob && state.sourceDataUrl) transformButton.click();
+      else fileInput.click();
+    });
+  };
+
   const setSource = async (file) => {
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!file) return;
     if (!validTypes.includes(file.type)) {
-      showToast('Please choose a JPEG, PNG, or WebP image.');
+      showTryErrorState('unsupported_format');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      showToast('Please keep uploads below 5MB.');
+      showTryErrorState('upload_too_large');
       return;
     }
-    const resized = await resizeFile(file, 512);
+    let resized;
+    try {
+      resized = await resizeFile(file, 512);
+    } catch (error) {
+      showTryErrorState('unsupported_format', error);
+      return;
+    }
     state.sourceBlob = resized.blob;
     state.sourceDataUrl = resized.dataUrl;
     state.variants = [];
@@ -2658,6 +2736,10 @@ async function initTryPage() {
   };
 
   dropzone.addEventListener('click', () => fileInput.click());
+  window.addEventListener('offline', () => {
+    if (state.transformController) state.transformController.abort();
+    showTryErrorState('offline');
+  });
   fileInput.addEventListener('change', async (event) => {
     const [file] = event.target.files || [];
     if (file) await setSource(file);
@@ -2734,12 +2816,22 @@ async function initTryPage() {
       return;
     }
     if (!state.sourceDataUrl || !state.sourceBlob) {
-      showToast('Upload a photo before running the transform shell.');
+      status.textContent = 'Choose a photo before transforming it.';
+      return;
+    }
+    if (!navigator.onLine && !state.filter.clientSideOnly) {
+      showTryErrorState('offline');
       return;
     }
     transformButton.disabled = true;
     transformButton.textContent = 'Working…';
     const intensity = Number(intensityInput.value || 65) / 100;
+    state.transformTimedOut = false;
+    state.transformController = new AbortController();
+    const timeoutHandle = window.setTimeout(() => {
+      state.transformTimedOut = true;
+      state.transformController?.abort();
+    }, 45_000);
     try {
       const result = await runTransform({
         filter: state.filter,
@@ -2750,6 +2842,7 @@ async function initTryPage() {
         progressElement: progress,
         byok: state.byok,
         customFilter: state.filter.customDefinition || null,
+        signal: state.transformController.signal,
       });
       state.variants = result.images;
       state.outputMode = result.mode;
@@ -2810,11 +2903,17 @@ async function initTryPage() {
         showBudgetState(error);
         return;
       }
-      const message = error?.message || 'The transform shell hit an error. Try a different photo or filter.';
-      status.textContent = message;
-      showToast(`Transform failed: ${message}`);
+      if (state.transformTimedOut || error?.name === 'AbortError' && !navigator.onLine) {
+        showTryErrorState(state.transformTimedOut ? 'model_timeout' : 'offline', error);
+      } else if (error instanceof TypeError || error?.code === 'network_error') {
+        showTryErrorState(navigator.onLine ? 'model_timeout' : 'offline', error);
+      } else {
+        showTryErrorState('unknown', error);
+      }
       console.error(error);
     } finally {
+      window.clearTimeout(timeoutHandle);
+      state.transformController = null;
       transformButton.disabled = false;
       updateTransformButtonLabel();
     }

@@ -31,7 +31,7 @@
   <section class="static-hero">
     <span class="page-eyebrow">Privacy</span>
     <h1>Photos, demos, and data handling</h1>
-    <p class="lead">The web shell is explicit about what happens to photos: client-side effects never leave the device, AI-backed transforms are intended to flow through backend endpoints later, and the PRD assumes short-lived image retention for server-side processing.</p>
+    <p class="lead">GIC Photo Filters either applies an effect on your device or sends your selected photo to the transform API for a one-time result. In the public direct mode, the photo is returned in the response and is not stored by GIC.</p>
   </section>
     <section class="section static-grid">
       <article class="detail-card">
@@ -40,7 +40,7 @@
       </article>
       <article class="detail-card">
         <h3>AI transform intent</h3>
-        <p>When <code>/api/transform</code> is connected, photos may be processed by AI infrastructure. The PRD targets temporary storage and deletion within 24 hours for those flows.</p>
+        <p>For an AI-backed catalog filter, the selected photo is sent to <code>POST /api/transform</code> and processed by the configured AI provider. In the public <code>direct</code> mode, the transformed image is returned immediately in the response; GIC does not persist the source photo, a job record, or the result image.</p>
       </article>
       <article class="detail-card">
         <h3>No account required</h3>
@@ -48,22 +48,22 @@
       </article>
       <article class="detail-card">
         <h3>Bring Your Own Key (BYOK)</h3>
-        <p>The Try page accepts your Cloudflare Account ID and Workers AI token in the BYOK panel. Credentials are stored in <code>sessionStorage</code>, used to call Cloudflare directly, and are never sent to GIC’s servers. Follow the <a href="/docs/cloudflare-setup.html">Cloudflare BYOK guide</a> to create the values you need.</p>
+        <p>The public app and demo flow do not require an account or key. A separate BYOK builder/deployment flow may be available on the website; its credentials remain in the browser and are not part of the V1 iOS flow.</p>
       </article>
     </section>
   <section class="section card">
     <div class="section-heading">
       <div>
-        <span class="page-eyebrow">What to publish at launch</span>
-        <h2>Recommended privacy copy upgrades</h2>
+        <span class="page-eyebrow">Operational privacy</span>
+        <h2>Rate limiting and providers</h2>
       </div>
-      <p>The structure is ready now; finalize operational specifics when backend storage, logging, and support channels are locked in.</p>
+      <p>The public direct mode uses anonymous IP-based counters to enforce the free demo allowance. This is abuse prevention, not advertising or cross-site tracking. The AI provider processes the image only to return the requested transform.</p>
     </div>
     <div class="markdown-content">
       <ul>
-        <li>State retention windows for uploaded and transformed images.</li>
-        <li>List Google Analytics if <code>/docs/assets/site-config.json</code> is updated to enable it.</li>
-        <li>Document rate limiting, abuse prevention, and R2 cleanup behavior once the worker is live.</li>
+        <li>Direct mode does not persist source or result images.</li>
+        <li>No advertising tracker or analytics profile is used by the V1 app.</li>
+        <li>Deployments that enable R2 storage have different retention behavior and must publish that configuration separately.</li>
       </ul>
     </div>
   </section>
