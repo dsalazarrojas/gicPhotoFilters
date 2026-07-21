@@ -27,3 +27,12 @@ status*.txt
 
 # Claude config
 .claude/
+
+# Keep the repository-local GIC ad generator skill available.
+!.claude/
+!.claude/skills/
+!.claude/skills/gic-ad-generator/
+!.claude/skills/gic-ad-generator/SKILL.md
+
+# Local draft ad creatives
+generated-ads/

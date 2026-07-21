@@ -18,6 +18,8 @@ id = "69d43c998f9440ed9c73648d9591beee"
 preview_id = "1a04e87cc92048c48e2ca544e9b2be02"
 
 [vars]
+# AD_ADMIN_TOKEN is required by functions/api/generate-background.js. Set it with
+# `wrangler pages secret put AD_ADMIN_TOKEN`; do not commit it here in [vars] plaintext.
 STORAGE_MODE = "direct"
 # Neuron budget math (2026-07-17, revised): flux-2-klein-9b is hardcoded at
 # 1410 neurons/run in functions/_lib/ai.js (and baked into estimatedNeurons for
